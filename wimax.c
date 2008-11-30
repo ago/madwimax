@@ -25,8 +25,15 @@
 
 #include <libusb-1.0/libusb.h>
 
+#define EP_IN			(2 | LIBUSB_ENDPOINT_IN)
+#define EP_OUT			(4 | LIBUSB_ENDPOINT_OUT)
+
 static struct libusb_device_handle *devh = NULL;
 static unsigned char read_buffer[0x4000];
+static struct libusb_transfer *req_transfer = NULL;
+static int req_in_progress = 0;
+
+static void exit_release_resources(int code);
 
 static int find_wimax_device(void)
 {
@@ -53,7 +60,7 @@ static int get_data(unsigned char* data, int size)
 	int r;
 	int transferred;
 
-	r = libusb_bulk_transfer(devh, 0x82, data, size, &transferred, 0);
+	r = libusb_bulk_transfer(devh, EP_IN, data, size, &transferred, 0);
 	if (r < 0) {
 		fprintf(stderr, "bulk read error %d\n", r);
 		return r;
@@ -70,7 +77,7 @@ static int set_data(unsigned char* data, int size)
 
 	dump_hex("Bulk write:", data, size);
 
-	r = libusb_bulk_transfer(devh, 0x04, data, size, &transferred, 0);
+	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
 		fprintf(stderr, "bulk write error %d\n", r);
 		return r;
@@ -82,10 +89,35 @@ static int set_data(unsigned char* data, int size)
 	return r;
 }
 
+static void cb_req(struct libusb_transfer *transfer)
+{
+	req_in_progress = 0;
+	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
+		fprintf(stderr, "req transfer status %d?\n", transfer->status);
+		return;
+	}
+
+	dump_hex("Async read:", transfer->buffer, transfer->actual_length);
+}
+
+static int alloc_transfers(void)
+{
+	req_transfer = libusb_alloc_transfer(0);
+	if (!req_transfer)
+		return -ENOMEM;
+	
+	libusb_fill_bulk_transfer(req_transfer, devh, EP_IN, read_buffer,
+		sizeof(read_buffer), cb_req, NULL, 0);
+
+	return 0;
+}
+
 static int init(void)
 {
-	unsigned char data1[0x8] = {0x57, 0x45, 0x04, 0, 0, 0x02, 0, 0x74};
-	unsigned char data2[0x18] = {0x57, 0x50, 0x14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x15, 0x0a, 0, 0, 0, 0, 0, 0};
+	unsigned char data1[] = {0x57, 0x45, 0x04, 0x00, 0x00, 0x02, 0x00, 0x74};
+	unsigned char data2[] = {0x57, 0x50, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	unsigned char data3[] = {0x57, 0x43, 0x12, 0x00, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x04, 0x50, 0x04, 0x00, 0x00};
+	unsigned char data4[] = {0x57, 0x43, 0x14, 0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00};
 	int r;
 
 	r = set_data(data1, sizeof(data1));
@@ -108,13 +140,39 @@ static int init(void)
 		return r;
 	}
 
+	alloc_transfers();
+
+	printf("Async read start...\n");
+	r = libusb_submit_transfer(req_transfer);
+	if (r < 0)
+		return r;
+	req_in_progress = 1;
+
+	r = set_data(data3, sizeof(data3));
+	if (r < 0) {
+		return r;
+	}
+
+	r = set_data(data4, sizeof(data4));
+	if (r < 0) {
+		return r;
+	}
+
+	while (req_in_progress) {
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+			exit_release_resources(0);
+	}
+
 	return 0;
 }
 
 static void exit_close_usb(int code);
 
-static void exit_release_interface(int code)
+static void exit_release_resources(int code)
 {
+	if(req_transfer != NULL)
+		libusb_free_transfer(req_transfer);
 	libusb_release_interface(devh, 0);
 	exit_close_usb(code);
 }
@@ -152,6 +210,6 @@ int main(void)
 
 	init();
 
-	exit_release_interface(0);
+	exit_release_resources(0);
 }
 
