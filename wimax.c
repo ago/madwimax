@@ -172,8 +172,8 @@ static int init(void)
 	r = libusb_submit_transfer(req_transfer);
 	if (r < 0)
 		return r;
+	
 	req_in_progress = 1;
-
 	r = set_data(data3, sizeof(data3));
 	if (r < 0) {
 		return r;
@@ -191,6 +191,30 @@ static int init(void)
 			return r;
 	}
 
+	printf("Chip info: %s\n", wd_status.chip_info);
+	printf("Firmware info: %s\n", wd_status.firmware_info);
+
+	req_in_progress = 1;
+	len = fill_init1_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
+	len = fill_mac_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
+	while (req_in_progress) {
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+			return r;
+	}
+
+	printf("MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+
 	return 0;
 }
 
@@ -198,8 +222,10 @@ static void exit_close_usb(int code);
 
 static void exit_release_resources(int code)
 {
-	if(req_transfer != NULL)
+	if(req_transfer != NULL) {
+		libusb_cancel_transfer(req_transfer);
 		libusb_free_transfer(req_transfer);
+	}
 	libusb_release_interface(devh, 0);
 	exit_close_usb(code);
 }
