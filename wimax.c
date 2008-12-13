@@ -215,7 +215,75 @@ static int init(void)
 
 	printf("MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
+	req_in_progress = 1;
+	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
+	while (req_in_progress) {
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+			return r;
+	}
+
+	req_in_progress = 1;
+	len = fill_init2_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
+	while (req_in_progress) {
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+			return r;
+	}
+
+	req_in_progress = 1;
+	len = fill_init3_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
+	while (req_in_progress) {
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+			return r;
+	}
+
+	req_in_progress = 1;
+	len = fill_authorization_data_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
+	if (r < 0) {
+		return r;
+	}
+
 	return 0;
+}
+
+static int scan_loop(void)
+{
+	unsigned char req_data[MAX_PACKET_LEN];
+	int len;
+	int r;
+
+	while (1) {
+		req_in_progress = 1;
+		len = fill_find_network_req(req_data, MAX_PACKET_LEN);
+		r = set_data(req_data, len);
+		if (r < 0) {
+			return r;
+		}
+
+		while (req_in_progress) {
+			r = libusb_handle_events(NULL);
+			if (r < 0)
+				return r;
+		}
+	}
 }
 
 static void exit_close_usb(int code);
@@ -272,7 +340,17 @@ int main(void)
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGQUIT, &sigact, NULL);
 
-	init();
+	r = init();
+	if (r < 0) {
+		fprintf(stderr, "init error %d\n", r);
+		exit_release_resources(1);
+	}
+
+	r = scan_loop();
+	if (r < 0) {
+		fprintf(stderr, "scan_loop error %d\n", r);
+		exit_release_resources(1);
+	}
 
 	exit_release_resources(0);
 }

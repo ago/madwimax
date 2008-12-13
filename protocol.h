@@ -30,5 +30,13 @@ int fill_init1_req(unsigned char *buf, int len);
 
 int fill_mac_req(unsigned char *buf, int len);
 
+int fill_init2_req(unsigned char *buf, int len);
+
+int fill_init3_req(unsigned char *buf, int len);
+
+int fill_authorization_data_req(unsigned char *buf, int len);
+
+int fill_find_network_req(unsigned char *buf, int len);
+
 #endif // _PROTOCOL_H
 

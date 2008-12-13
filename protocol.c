@@ -132,8 +132,9 @@ static void fill_C_req(unsigned char *buf, int len)
 	memset(buf + 6, 0, 12);
 }
 
-static void fill_normal_C_req(unsigned char *buf, int len, unsigned short type_a, unsigned short type_b, unsigned short param_len, unsigned char *param)
+static int fill_normal_C_req(unsigned char *buf, unsigned short type_a, unsigned short type_b, unsigned short param_len, unsigned char *param)
 {
+	int len = 0x1a + param_len;
 	fill_C_req(buf, len);
 	buf[0x04] = 0x15;
 	buf[0x05] = 0x00;
@@ -146,24 +147,44 @@ static void fill_normal_C_req(unsigned char *buf, int len, unsigned short type_a
 	buf[0x18] = param_len >> 8;
 	buf[0x19] = param_len & 0xff;
 	memcpy(buf + 0x1a, param, param_len);
+	return len;
 }
 
 int fill_string_info_req(unsigned char *buf, int len)
 {
-	fill_normal_C_req(buf, 0x1a, 0x8, 0x1, 0x0, NULL);
-	return 0x1a;
+	return fill_normal_C_req(buf, 0x8, 0x1, 0x0, NULL);
 }
 
 int fill_init1_req(unsigned char *buf, int len)
 {
 	unsigned char param[0x2] = {0x0, 0x1};
-	fill_normal_C_req(buf, 0x1c, 0x30, 0x1, sizeof(param), param);
-	return 0x1c;
+	return fill_normal_C_req(buf, 0x30, 0x1, sizeof(param), param);
 }
 
 int fill_mac_req(unsigned char *buf, int len)
 {
-	fill_normal_C_req(buf, 0x1a, 0x3, 0x1, 0x0, NULL);
-	return 0x1a;
+	return fill_normal_C_req(buf, 0x3, 0x1, 0x0, NULL);
+}
+
+int fill_init2_req(unsigned char *buf, int len)
+{
+	return fill_normal_C_req(buf, 0x20, 0x8, 0x0, NULL);
+}
+
+int fill_init3_req(unsigned char *buf, int len)
+{
+	return fill_normal_C_req(buf, 0x20, 0xc, 0x0, NULL);
+}
+
+int fill_authorization_data_req(unsigned char *buf, int len)
+{
+	unsigned char param[0xd] = {0x00, 0x10, 0x00, 0x09, 0x40, 0x79, 0x6f, 0x74, 0x61, 0x2e, 0x72, 0x75, 0x00};
+	return fill_normal_C_req(buf, 0x20, 0x20, sizeof(param), param);
+}
+
+int fill_find_network_req(unsigned char *buf, int len)
+{
+	unsigned char param[0x2] = {0x0, 0x1};
+	return fill_normal_C_req(buf, 0x1, 0x1, sizeof(param), param);
 }
 
