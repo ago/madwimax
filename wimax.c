@@ -1,5 +1,6 @@
 /*
- * This is a proof-of-concept driver for Samsung SWC-U200 wimax dongle.
+ * Proof-of-concept driver for Samsung SWC-U200 wimax dongle.
+ * This file contains binary protocol realization.
  * Copyright (C) 2008 Alexander Gordeev <lasaine@lvk.cs.msu.su>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,19 +26,30 @@
 
 #include <libusb-1.0/libusb.h>
 
+#include "protocol.h"
+#include "wimax.h"
+
+#define DEVICE_VID		0x04e9
+#define DEVICE_PID		0x6761
+
 #define EP_IN			(2 | LIBUSB_ENDPOINT_IN)
 #define EP_OUT			(4 | LIBUSB_ENDPOINT_OUT)
 
+#define MAX_PACKET_LEN		0x4000
+
 static struct libusb_device_handle *devh = NULL;
-static unsigned char read_buffer[0x4000];
+static unsigned char read_buffer[MAX_PACKET_LEN];
 static struct libusb_transfer *req_transfer = NULL;
 static int req_in_progress = 0;
+
+struct wimax_dev_status wd_status;
+
 
 static void exit_release_resources(int code);
 
 static int find_wimax_device(void)
 {
-	devh = libusb_open_device_with_vid_pid(NULL, 0x04e9, 0x6761);
+	devh = libusb_open_device_with_vid_pid(NULL, DEVICE_VID, DEVICE_PID);
 	return devh ? 0 : -EIO;
 }
 
@@ -99,65 +111,6 @@ static int set_data(unsigned char* data, int size)
 	return r;
 }
 
-static int process_C_response(const unsigned char *buf, int len)
-{
-}
-
-static int process_D_response(const unsigned char *buf, int len)
-{
-}
-
-static int process_E_response(const unsigned char *buf, int len)
-{
-}
-
-static int process_P_response(const unsigned char *buf, int len)
-{
-}
-
-static int process_response(const unsigned char *buf, int len)
-{
-	int check_len;
-
-	if(len < 4) {
-		printf("short read\n");
-		return -1;
-	}
-
-	if(buf[0] != 0x57) {
-		printf("bad header\n");
-		return -1;
-	}
-
-	check_len = 4 + buf[2] + (buf[3] << 8);
-	if(buf[1] == 0x43 || buf[1] == 0x44) {
-		check_len += 2;
-	}
-
-	if(check_len != len) {
-		printf("bad length: %02x instead of %02x\n", check_len, len);
-		return -1;
-	}
-
-	switch (buf[1]) {
-		case 0x43:
-			process_C_response(buf, len);
-			break;
-		case 0x44:
-			process_D_response(buf, len);
-			break;
-		case 0x45:
-			process_E_response(buf, len);
-			break;
-		case 0x50:
-			process_P_response(buf, len);
-			break;
-		default:
-			printf("bad response type: %02x\n", buf[1]);
-			return -1;
-	}
-}
-
 static void cb_req(struct libusb_transfer *transfer)
 {
 	req_in_progress = 0;
@@ -167,7 +120,7 @@ static void cb_req(struct libusb_transfer *transfer)
 	}
 
 	dump_hex_ascii("Async read:", transfer->buffer, transfer->actual_length);
-	process_response(transfer->buffer, transfer->actual_length);
+	process_response(&wd_status, transfer->buffer, transfer->actual_length);
 }
 
 static int alloc_transfers(void)
@@ -187,7 +140,8 @@ static int init(void)
 	unsigned char data1[] = {0x57, 0x45, 0x04, 0x00, 0x00, 0x02, 0x00, 0x74};
 	unsigned char data2[] = {0x57, 0x50, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	unsigned char data3[] = {0x57, 0x43, 0x12, 0x00, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x04, 0x50, 0x04, 0x00, 0x00};
-	unsigned char data4[] = {0x57, 0x43, 0x14, 0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00};
+	unsigned char req_data[MAX_PACKET_LEN];
+	int len;
 	int r;
 
 	r = set_data(data1, sizeof(data1));
@@ -212,7 +166,7 @@ static int init(void)
 
 	alloc_transfers();
 
-	printf("Async read start...\n");
+	printf("Continuous async read start...\n");
 	r = libusb_submit_transfer(req_transfer);
 	if (r < 0)
 		return r;
@@ -223,7 +177,8 @@ static int init(void)
 		return r;
 	}
 
-	r = set_data(data4, sizeof(data4));
+	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	r = set_data(req_data, len);
 	if (r < 0) {
 		return r;
 	}
@@ -231,7 +186,7 @@ static int init(void)
 	while (req_in_progress) {
 		r = libusb_handle_events(NULL);
 		if (r < 0)
-			exit_release_resources(0);
+			return r;
 	}
 
 	return 0;
