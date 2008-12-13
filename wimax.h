@@ -24,6 +24,7 @@ struct wimax_dev_status {
 	char chip_info[40];
 	char firmware_info[40];
 	unsigned char mac[6];
+	int network_found;
 };
 
 #endif // _WIMAX_H

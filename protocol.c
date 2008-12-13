@@ -45,6 +45,14 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 		memcpy(dev->mac, buf + 0x1a, 0x6);
 		return 0;
 	}
+	if (type_a == 0x1 && type_b == 0x2) {
+		if (param_len != 0x2) {
+			printf("bad param_len\n");
+			return -1;
+		}
+		dev->network_found = 1;
+		return 0;
+	}
 }
 
 static int process_debug_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
@@ -71,16 +79,17 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 	}
 }
 
-static int process_D_response(const unsigned char *buf, int len)
+static int process_D_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 }
 
-static int process_E_response(const unsigned char *buf, int len)
+static int process_E_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 }
 
-static int process_P_response(const unsigned char *buf, int len)
+static int process_P_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	dev->network_found = 0;
 }
 
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
@@ -111,11 +120,11 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 		case 0x43:
 			return process_C_response(dev, buf, len);
 		case 0x44:
-			return process_D_response(buf, len);
+			return process_D_response(dev, buf, len);
 		case 0x45:
-			return process_E_response(buf, len);
+			return process_E_response(dev, buf, len);
 		case 0x50:
-			return process_P_response(buf, len);
+			return process_P_response(dev, buf, len);
 		default:
 			printf("bad response type: %02x\n", buf[1]);
 			return -1;

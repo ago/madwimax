@@ -283,6 +283,12 @@ static int scan_loop(void)
 			if (r < 0)
 				return r;
 		}
+
+		if (wd_status.network_found == 0) {
+			printf("Network not found.\n");
+		} else {
+			printf("Network found.\n");
+		}
 	}
 }
 
