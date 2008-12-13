@@ -42,7 +42,7 @@ static int find_wimax_device(void)
 }
 
 /* dump message msg and len bytes from buf in hexadecimal. */
-void dump_hex(const char *msg, const void *buf, int len)
+static void dump_hex(const char *msg, const void *buf, int len)
 {
 	int i;
 	printf("%s\n", msg);
@@ -89,6 +89,65 @@ static int set_data(unsigned char* data, int size)
 	return r;
 }
 
+static int process_C_response(const unsigned char *buf, int len)
+{
+}
+
+static int process_D_response(const unsigned char *buf, int len)
+{
+}
+
+static int process_E_response(const unsigned char *buf, int len)
+{
+}
+
+static int process_P_response(const unsigned char *buf, int len)
+{
+}
+
+static int process_response(const unsigned char *buf, int len)
+{
+	int check_len;
+
+	if(len < 4) {
+		printf("short read\n");
+		return -1;
+	}
+
+	if(buf[0] != 0x57) {
+		printf("bad header\n");
+		return -1;
+	}
+
+	check_len = 4 + buf[2] + (buf[3] << 8);
+	if(buf[1] == 0x43 || buf[1] == 0x44) {
+		check_len += 2;
+	}
+
+	if(check_len != len) {
+		printf("bad length: %02x instead of %02x\n", check_len, len);
+		return -1;
+	}
+
+	switch (buf[1]) {
+		case 0x43:
+			process_C_response(buf, len);
+			break;
+		case 0x44:
+			process_D_response(buf, len);
+			break;
+		case 0x45:
+			process_E_response(buf, len);
+			break;
+		case 0x50:
+			process_P_response(buf, len);
+			break;
+		default:
+			printf("bad response type: %02x\n", buf[1]);
+			return -1;
+	}
+}
+
 static void cb_req(struct libusb_transfer *transfer)
 {
 	req_in_progress = 0;
@@ -98,6 +157,7 @@ static void cb_req(struct libusb_transfer *transfer)
 	}
 
 	dump_hex("Async read:", transfer->buffer, transfer->actual_length);
+	process_response(transfer->buffer, transfer->actual_length);
 }
 
 static int alloc_transfers(void)
@@ -184,6 +244,10 @@ static void exit_close_usb(int code)
 	exit(code);
 }
 
+static void sighandler(int signum) {
+	exit_release_resources(0);
+}
+
 int main(void)
 {
 	struct sigaction sigact;
@@ -207,6 +271,13 @@ int main(void)
 		exit_close_usb(1);
 	}
 	printf("claimed interface\n");
+
+	sigact.sa_handler = sighandler;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGQUIT, &sigact, NULL);
 
 	init();
 
