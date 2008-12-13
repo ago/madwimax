@@ -41,18 +41,28 @@ static int find_wimax_device(void)
 	return devh ? 0 : -EIO;
 }
 
-/* dump message msg and len bytes from buf in hexadecimal. */
-static void dump_hex(const char *msg, const void *buf, int len)
+/* If a character is not printable, return a dot. */
+#define toprint(x) (isprint((unsigned int)x) ? (x) : '.')
+
+/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
+static void dump_hex_ascii(const char *msg, const void *buf, int len)
 {
 	int i;
 	printf("%s\n", msg);
-	for (i = 0; i < len; i++) {
-		printf(i % 16 != 15 ? "%02x " : "%02x", ((unsigned char*)buf)[i]);
-		if ((i % 16 == 15) && (i != len - 1)) {
-			printf("\n");
+	for (i = 0; i < len; i+=16) {
+		int j;
+		unsigned char hex[49];
+		unsigned char ascii[17];
+		memset(hex, ' ', 48);
+		for(j = i; j < i + 16 && j < len; j++) {
+			sprintf(hex + ((j - i) * 3), " %02x", ((unsigned char*)buf)[j]);
+			ascii[j - i] = toprint(((unsigned char*)buf)[j]);
 		}
+		hex[(j - i) * 3] = ' ';
+		hex[48] = 0;
+		ascii[j - i] = 0;
+		printf("  %08x:%s    %s\n", i, hex, ascii);
 	}
-	printf("\n");
 }
 
 static int get_data(unsigned char* data, int size)
@@ -66,7 +76,7 @@ static int get_data(unsigned char* data, int size)
 		return r;
 	}
 
-	dump_hex("Bulk read:", data, transferred);
+	dump_hex_ascii("Bulk read:", data, transferred);
 	return r;
 }
 
@@ -75,7 +85,7 @@ static int set_data(unsigned char* data, int size)
 	int r;
 	int transferred;
 
-	dump_hex("Bulk write:", data, size);
+	dump_hex_ascii("Bulk write:", data, size);
 
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
@@ -156,7 +166,7 @@ static void cb_req(struct libusb_transfer *transfer)
 		return;
 	}
 
-	dump_hex("Async read:", transfer->buffer, transfer->actual_length);
+	dump_hex_ascii("Async read:", transfer->buffer, transfer->actual_length);
 	process_response(transfer->buffer, transfer->actual_length);
 }
 
