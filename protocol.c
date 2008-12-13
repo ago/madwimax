@@ -1,5 +1,6 @@
 /*
- * This is a proof-of-concept driver for Samsung SWC-U200 wimax dongle.
+ * Proof-of-concept driver for Samsung SWC-U200 wimax dongle.
+ * This file contains binary protocol realization.
  * Copyright (C) 2008 Alexander Gordeev <lasaine@lvk.cs.msu.su>
  *
  * This program is free software; you can redistribute it and/or modify

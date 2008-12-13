@@ -1,6 +1,5 @@
 /*
- * Proof-of-concept driver for Samsung SWC-U200 wimax dongle.
- * This file contains binary protocol realization.
+ * This is a proof-of-concept driver for Samsung SWC-U200 wimax dongle.
  * Copyright (C) 2008 Alexander Gordeev <lasaine@lvk.cs.msu.su>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -121,6 +120,9 @@ static void cb_req(struct libusb_transfer *transfer)
 
 	dump_hex_ascii("Async read:", transfer->buffer, transfer->actual_length);
 	process_response(&wd_status, transfer->buffer, transfer->actual_length);
+	if (libusb_submit_transfer(req_transfer) < 0) {
+		fprintf(stderr, "async read transfer sumbit failed\n");
+	}
 }
 
 static int alloc_transfers(void)
