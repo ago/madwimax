@@ -326,7 +326,7 @@ static void exit_release_resources(int code)
 		libusb_cancel_transfer(req_transfer);
 		libusb_free_transfer(req_transfer);
 	}
-	if(tap_fd != -1) {
+	if(tap_fd >= 0) {
 		tap_close(tap_fd, tap_dev);
 	}
 	libusb_release_interface(devh, 0);
