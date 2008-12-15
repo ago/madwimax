@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,8 +42,8 @@ static unsigned char read_buffer[MAX_PACKET_LEN];
 static struct libusb_transfer *req_transfer = NULL;
 static int req_in_progress = 0;
 
-struct wimax_dev_status wd_status;
-
+static struct wimax_dev_status wd_status;
+static int wimax_debug_level = 0;
 
 static void exit_release_resources(int code);
 
@@ -52,13 +53,28 @@ static int find_wimax_device(void)
 	return devh ? 0 : -EIO;
 }
 
+/* print debug message. */
+void debug_msg(int level, const char *fmt, ...)
+{
+	va_list va;
+	
+	if (level > wimax_debug_level) return;
+
+	va_start(va, fmt);
+	vprintf(fmt, va);
+	va_end(va);
+}
+
 /* If a character is not printable, return a dot. */
 #define toprint(x) (isprint((unsigned int)x) ? (x) : '.')
 
 /* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-static void dump_hex_ascii(const char *msg, const void *buf, int len)
+void debug_dumphexasc(int level, const char *msg, const void *buf, int len)
 {
 	int i;
+
+	if (level > wimax_debug_level) return;
+
 	printf("%s\n", msg);
 	for (i = 0; i < len; i+=16) {
 		int j;
@@ -83,11 +99,11 @@ static int get_data(unsigned char* data, int size)
 
 	r = libusb_bulk_transfer(devh, EP_IN, data, size, &transferred, 0);
 	if (r < 0) {
-		fprintf(stderr, "bulk read error %d\n", r);
+		debug_msg(0, "bulk read error %d\n", r);
 		return r;
 	}
 
-	dump_hex_ascii("Bulk read:", data, transferred);
+	debug_dumphexasc(1, "Bulk read:", data, transferred);
 	return r;
 }
 
@@ -96,15 +112,15 @@ static int set_data(unsigned char* data, int size)
 	int r;
 	int transferred;
 
-	dump_hex_ascii("Bulk write:", data, size);
+	debug_dumphexasc(1, "Bulk write:", data, size);
 
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
-		fprintf(stderr, "bulk write error %d\n", r);
+		debug_msg(0, "bulk write error %d\n", r);
 		return r;
 	}
 	if (transferred < size) {
-		fprintf(stderr, "short write (%d)\n", r);
+		debug_msg(0, "short write (%d)\n", r);
 		return -1;
 	}
 	return r;
@@ -114,14 +130,14 @@ static void cb_req(struct libusb_transfer *transfer)
 {
 	req_in_progress = 0;
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		fprintf(stderr, "req transfer status %d?\n", transfer->status);
+		debug_msg(0, "req transfer status %d?\n", transfer->status);
 		return;
 	}
 
-	dump_hex_ascii("Async read:", transfer->buffer, transfer->actual_length);
+	debug_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);
 	process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	if (libusb_submit_transfer(req_transfer) < 0) {
-		fprintf(stderr, "async read transfer sumbit failed\n");
+		debug_msg(0, "async read transfer sumbit failed\n");
 	}
 }
 
@@ -168,7 +184,7 @@ static int init(void)
 
 	alloc_transfers();
 
-	printf("Continuous async read start...\n");
+	debug_msg(0, "Continuous async read start...\n");
 	r = libusb_submit_transfer(req_transfer);
 	if (r < 0)
 		return r;
@@ -191,8 +207,8 @@ static int init(void)
 			return r;
 	}
 
-	printf("Chip info: %s\n", wd_status.chip_info);
-	printf("Firmware info: %s\n", wd_status.firmware_info);
+	debug_msg(0, "Chip info: %s\n", wd_status.chip_info);
+	debug_msg(0, "Firmware info: %s\n", wd_status.firmware_info);
 
 	req_in_progress = 1;
 	len = fill_init1_req(req_data, MAX_PACKET_LEN);
@@ -213,7 +229,7 @@ static int init(void)
 			return r;
 	}
 
-	printf("MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
 	req_in_progress = 1;
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
@@ -285,11 +301,15 @@ static int scan_loop(void)
 		}
 
 		if (wd_status.network_found == 0) {
-			printf("Network not found.\n");
+			debug_msg(0, "Network not found.\n");
 		} else {
-			printf("Network found.\n");
+			debug_msg(0, "Network found.\n");
 		}
 	}
+}
+
+static int parse_args(int argc, char **argv)
+{
 }
 
 static void exit_close_usb(int code);
@@ -315,29 +335,31 @@ static void sighandler(int signum) {
 	exit_release_resources(0);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	struct sigaction sigact;
 	int r = 1;
 
+	parse_args(argc, argv);
+
 	r = libusb_init(NULL);
 	if (r < 0) {
-		fprintf(stderr, "failed to initialise libusb\n");
+		debug_msg(0, "failed to initialise libusb\n");
 		exit(1);
 	}
 
 	r = find_wimax_device();
 	if (r < 0) {
-		fprintf(stderr, "Could not find/open device\n");
+		debug_msg(0, "Could not find/open device\n");
 		exit_close_usb(1);
 	}
 
 	r = libusb_claim_interface(devh, 0);
 	if (r < 0) {
-		fprintf(stderr, "usb_claim_interface error %d\n", r);
+		debug_msg(0, "usb_claim_interface error %d\n", r);
 		exit_close_usb(1);
 	}
-	printf("claimed interface\n");
+	debug_msg(0, "claimed interface\n");
 
 	sigact.sa_handler = sighandler;
 	sigemptyset(&sigact.sa_mask);
@@ -348,13 +370,13 @@ int main(void)
 
 	r = init();
 	if (r < 0) {
-		fprintf(stderr, "init error %d\n", r);
+		debug_msg(0, "init error %d\n", r);
 		exit_release_resources(1);
 	}
 
 	r = scan_loop();
 	if (r < 0) {
-		fprintf(stderr, "scan_loop error %d\n", r);
+		debug_msg(0, "scan_loop error %d\n", r);
 		exit_release_resources(1);
 	}
 

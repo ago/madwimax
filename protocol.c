@@ -30,7 +30,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	short param_len = (buf[0x18] << 8) + buf[0x19];
 	if (type_a == 0x8 && type_b == 0x2) {
 		if (param_len != 0x80) {
-			printf("bad param_len\n");
+			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
 		memcpy(dev->chip_info, buf + 0x1a, 0x40);
@@ -39,7 +39,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	}
 	if (type_a == 0x3 && type_b == 0x2) {
 		if (param_len != 0x6) {
-			printf("bad param_len\n");
+			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
 		memcpy(dev->mac, buf + 0x1a, 0x6);
@@ -47,7 +47,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	}
 	if (type_a == 0x1 && type_b == 0x2) {
 		if (param_len != 0x2) {
-			printf("bad param_len\n");
+			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
 		dev->network_found = 1;
@@ -62,7 +62,7 @@ static int process_debug_C_response(struct wimax_dev_status *dev, const unsigned
 static int process_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 	if (buf[0x12] != 0x15) {
-		printf("bad format\n");
+		debug_msg(0, "bad format\n");
 		return -1;
 	}
 
@@ -74,7 +74,7 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 		case 0x04:
 			break;
 		default:
-			printf("bad format\n");
+			debug_msg(0, "bad format\n");
 			return -1;
 	}
 }
@@ -97,12 +97,12 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 	int check_len;
 
 	if(len < 4) {
-		printf("short read\n");
+		debug_msg(0, "short read\n");
 		return -1;
 	}
 
 	if(buf[0] != 0x57) {
-		printf("bad header\n");
+		debug_msg(0, "bad header\n");
 		return -1;
 	}
 
@@ -112,7 +112,7 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 	}
 
 	if(check_len != len) {
-		printf("bad length: %02x instead of %02x\n", check_len, len);
+		debug_msg(0, "bad length: %02x instead of %02x\n", check_len, len);
 		return -1;
 	}
 
@@ -126,7 +126,7 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 		case 0x50:
 			return process_P_response(dev, buf, len);
 		default:
-			printf("bad response type: %02x\n", buf[1]);
+			debug_msg(0, "bad response type: %02x\n", buf[1]);
 			return -1;
 	}
 }

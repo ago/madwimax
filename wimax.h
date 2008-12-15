@@ -27,5 +27,11 @@ struct wimax_dev_status {
 	int network_found;
 };
 
+/* print debug message. */
+void debug_msg(int level, const char *fmt, ...);
+
+/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
+void debug_dumphexasc(int level, const char *msg, const void *buf, int len);
+
 #endif // _WIMAX_H
 
