@@ -28,6 +28,7 @@
 
 #include "protocol.h"
 #include "wimax.h"
+#include "tun_dev.h"
 
 #define DEVICE_VID		0x04e9
 #define DEVICE_PID		0x6761
@@ -38,9 +39,13 @@
 #define MAX_PACKET_LEN		0x4000
 
 static struct libusb_device_handle *devh = NULL;
-static unsigned char read_buffer[MAX_PACKET_LEN];
 static struct libusb_transfer *req_transfer = NULL;
+
+static unsigned char read_buffer[MAX_PACKET_LEN];
 static int req_in_progress = 0;
+
+static int tap_fd = -1;
+static char tap_dev[20];
 
 static struct wimax_dev_status wd_status;
 static int wimax_debug_level = 0;
@@ -288,13 +293,14 @@ static int scan_loop(void)
 
 	while (1) {
 		req_in_progress = 1;
+		wd_status.info_updated = 0;
 		len = fill_find_network_req(req_data, MAX_PACKET_LEN);
 		r = set_data(req_data, len);
 		if (r < 0) {
 			return r;
 		}
 
-		while (req_in_progress) {
+		while (wd_status.info_updated == 0) {
 			r = libusb_handle_events(NULL);
 			if (r < 0)
 				return r;
@@ -319,6 +325,9 @@ static void exit_release_resources(int code)
 	if(req_transfer != NULL) {
 		libusb_cancel_transfer(req_transfer);
 		libusb_free_transfer(req_transfer);
+	}
+	if(tap_fd != -1) {
+		tap_close(tap_fd, tap_dev);
 	}
 	libusb_release_interface(devh, 0);
 	exit_close_usb(code);
@@ -373,6 +382,14 @@ int main(int argc, char **argv)
 		debug_msg(0, "init error %d\n", r);
 		exit_release_resources(1);
 	}
+
+	tap_fd = tap_open(tap_dev);
+	if (tap_fd < 0) {
+		debug_msg(0, "failed to allocate tap interface\n");
+		exit_release_resources(1);
+	}
+
+	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
 
 	r = scan_loop();
 	if (r < 0) {

@@ -17,22 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#ifndef _WIMAX_H
-#define _WIMAX_H
+#ifndef _TUN_DEV_H
+#define _TUN_DEV_H
 
-struct wimax_dev_status {
-	int info_updated;
-	char chip_info[40];
-	char firmware_info[40];
-	unsigned char mac[6];
-	int network_found;
-};
+int tun_open(char *dev);
+int tap_open(char *dev);
 
-/* print debug message. */
-void debug_msg(int level, const char *fmt, ...);
+int tun_close(int fd, char *dev);
+int tap_close(int fd, char *dev);
 
-/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void debug_dumphexasc(int level, const char *msg, const void *buf, int len);
-
-#endif // _WIMAX_H
+#endif // _TUN_DEV_H
 

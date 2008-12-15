@@ -28,6 +28,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	short type_a = (buf[0x14] << 8) + buf[0x15];
 	short type_b = (buf[0x16] << 8) + buf[0x17];
 	short param_len = (buf[0x18] << 8) + buf[0x19];
+	dev->info_updated = 1;
 	if (type_a == 0x8 && type_b == 0x2) {
 		if (param_len != 0x80) {
 			debug_msg(0, "bad param_len\n");
