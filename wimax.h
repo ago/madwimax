@@ -26,6 +26,12 @@ struct wimax_dev_status {
 	char firmware_info[0x40];
 	unsigned char mac[6];
 	int network_found;
+	short rssi;
+	float cinr;
+	unsigned char bsid[6];
+	unsigned short txpwr;
+	unsigned int freq;
+	int state;
 };
 
 /* print debug message. */

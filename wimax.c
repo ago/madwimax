@@ -294,24 +294,62 @@ static int scan_loop(void)
 	int r;
 
 	while (1) {
-		req_in_progress = 1;
-		wd_status.info_updated = 0;
-		len = fill_find_network_req(req_data, MAX_PACKET_LEN);
-		r = set_data(req_data, len);
-		if (r < 0) {
-			return r;
-		}
-
-		while (wd_status.info_updated == 0) {
-			r = libusb_handle_events(NULL);
-			if (r < 0)
-				return r;
-		}
-
 		if (wd_status.network_found == 0) {
-			debug_msg(0, "Network not found.\n");
+			wd_status.info_updated = 0;
+			len = fill_find_network_req(req_data, MAX_PACKET_LEN);
+			r = set_data(req_data, len);
+			if (r < 0) {
+				return r;
+			}
+	
+			while (wd_status.info_updated == 0) {
+				r = libusb_handle_events(NULL);
+				if (r < 0)
+					return r;
+			}
+	
+			if (wd_status.network_found == 0) {
+				debug_msg(0, "Network not found.\n");
+			} else {
+				debug_msg(0, "Network found.\n");
+			}
 		} else {
-			debug_msg(0, "Network found.\n");
+			wd_status.info_updated = 0;
+			//len = fill_connection_params1_req(req_data, MAX_PACKET_LEN);
+			//r = set_data(req_data, len);
+			//if (r < 0) {
+			//	return r;
+			//}
+
+			len = fill_connection_params2_req(req_data, MAX_PACKET_LEN);
+			r = set_data(req_data, len);
+			if (r < 0) {
+				return r;
+			}
+
+			while (wd_status.info_updated == 0) {
+				r = libusb_handle_events(NULL);
+				if (r < 0)
+					return r;
+			}
+
+			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d\n", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
+			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
+
+			wd_status.info_updated = 0;
+			len = fill_state_req(req_data, MAX_PACKET_LEN);
+			r = set_data(req_data, len);
+			if (r < 0) {
+				return r;
+			}
+
+			while (wd_status.info_updated == 0) {
+				r = libusb_handle_events(NULL);
+				if (r < 0)
+					return r;
+			}
+
+			debug_msg(0, "State: %s\n", wimax_states[wd_status.state]);
 		}
 	}
 }

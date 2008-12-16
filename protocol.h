@@ -38,5 +38,11 @@ int fill_authorization_data_req(unsigned char *buf, int len);
 
 int fill_find_network_req(unsigned char *buf, int len);
 
+int fill_connection_params1_req(unsigned char *buf, int len);
+
+int fill_connection_params2_req(unsigned char *buf, int len);
+
+int fill_state_req(unsigned char *buf, int len);
+
 #endif // _PROTOCOL_H
 
