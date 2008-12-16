@@ -50,6 +50,8 @@ static char tap_dev[20];
 static struct wimax_dev_status wd_status;
 static int wimax_debug_level = 0;
 
+char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
+
 static void exit_release_resources(int code);
 
 static int find_wimax_device(void)
@@ -388,6 +390,7 @@ int main(int argc, char **argv)
 		debug_msg(0, "failed to allocate tap interface\n");
 		exit_release_resources(1);
 	}
+	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
 

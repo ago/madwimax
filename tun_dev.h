@@ -26,5 +26,7 @@ int tap_open(char *dev);
 int tun_close(int fd, char *dev);
 int tap_close(int fd, char *dev);
 
+int tap_set_hwaddr(int fd, char *dev, char *hwaddr);
+
 #endif // _TUN_DEV_H
 

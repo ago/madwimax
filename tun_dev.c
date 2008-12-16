@@ -20,7 +20,6 @@
  * $Id: tun_dev.c,v 1.4.2.1 2008/01/07 22:36:22 mtbishop Exp $
  */ 
 
-//#include "config.h"
 #define HAVE_LINUX_IF_TUN_H
 
 #include <unistd.h>
@@ -34,10 +33,8 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <linux/if.h>
-
-//#include "vtun.h"
-//#include "lib.h"
-
+#include <linux/if_arp.h>
+#include <linux/if_ether.h>
 
 
 /* 
@@ -120,6 +117,25 @@ failed:
 # define tun_open_common(dev, type) tun_open_common0(dev, type)
 
 #endif /* New driver support */
+
+int tap_set_hwaddr(int fd, char *dev, char *hwaddr)
+{
+        struct ifreq ifr;
+
+        /* Fill in the structure */
+        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
+        ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+        memcpy(&ifr.ifr_hwaddr.sa_data, hwaddr, ETH_ALEN);
+
+        /* call the IOCTL */
+        if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
+                perror("ioctl(SIOCSIFHWADDR)");
+                return -1;
+        }
+
+        /* we're out of here! */
+        return 0;
+}
 
 int tun_open(char *dev) { return tun_open_common(dev, 1); }
 int tap_open(char *dev) { return tun_open_common(dev, 0); }
