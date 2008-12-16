@@ -51,7 +51,15 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->network_found = 1;
+		dev->network_found = (buf[0x1a] << 8) + buf[0x1b];
+		return 0;
+	}
+	if (type_a == 0x1 && type_b == 0x3) {
+		if (param_len != 0x4) {
+			debug_msg(0, "bad param_len\n");
+			return -1;
+		}
+		dev->network_found = 0;
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0xa) {
@@ -60,7 +68,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			return -1;
 		}
 		dev->rssi = (buf[0x1a] << 8) + buf[0x1b];
-		dev->cinr = (float)((buf[0x1c] << 8) + buf[0x1d]) / 8;
+		dev->cinr = (float)((short)((buf[0x1c] << 8) + buf[0x1d])) / 8;
 		memcpy(dev->bsid, buf + 0x1e, 0x6);
 		dev->txpwr = (buf[0x26] << 8) + buf[0x27];
 		dev->freq = (buf[0x28] << 24) + (buf[0x29] << 16) + (buf[0x2a] << 8) + buf[0x2b];
@@ -110,7 +118,6 @@ static int process_E_response(struct wimax_dev_status *dev, const unsigned char 
 
 static int process_P_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
-	dev->network_found = 0;
 }
 
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
@@ -212,9 +219,9 @@ int fill_authorization_data_req(unsigned char *buf, int len)
 	return fill_normal_C_req(buf, 0x20, 0x20, sizeof(param), param);
 }
 
-int fill_find_network_req(unsigned char *buf, int len)
+int fill_find_network_req(unsigned char *buf, int len, unsigned short level)
 {
-	unsigned char param[0x2] = {0x0, 0x1};
+	unsigned char param[0x2] = {level >> 8, level & 0xff};
 	return fill_normal_C_req(buf, 0x1, 0x1, sizeof(param), param);
 }
 

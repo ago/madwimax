@@ -48,7 +48,7 @@ static int tap_fd = -1;
 static char tap_dev[20];
 
 static struct wimax_dev_status wd_status;
-static int wimax_debug_level = 0;
+static int wimax_debug_level = 1;
 
 char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
 
@@ -287,6 +287,8 @@ static int init(void)
 	return 0;
 }
 
+int flag = 0;
+
 static int scan_loop(void)
 {
 	unsigned char req_data[MAX_PACKET_LEN];
@@ -296,7 +298,7 @@ static int scan_loop(void)
 	while (1) {
 		if (wd_status.network_found == 0) {
 			wd_status.info_updated = 0;
-			len = fill_find_network_req(req_data, MAX_PACKET_LEN);
+			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
 			r = set_data(req_data, len);
 			if (r < 0) {
 				return r;
@@ -349,7 +351,28 @@ static int scan_loop(void)
 					return r;
 			}
 
-			debug_msg(0, "State: %s\n", wimax_states[wd_status.state]);
+			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.network_found);
+
+			sleep(2);
+
+			if (flag == 0 && wd_status.network_found == 1) {
+				flag = 1;
+				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
+				r = set_data(req_data, len);
+				if (r < 0) {
+					return r;
+				}
+
+				while (wd_status.info_updated == 0) {
+					r = libusb_handle_events(NULL);
+					if (r < 0)
+						return r;
+				}
+			}
+		}
+		if (wd_status.network_found != 1)
+		{
+			flag = 0;
 		}
 	}
 }

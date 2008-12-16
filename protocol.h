@@ -36,7 +36,7 @@ int fill_init3_req(unsigned char *buf, int len);
 
 int fill_authorization_data_req(unsigned char *buf, int len);
 
-int fill_find_network_req(unsigned char *buf, int len);
+int fill_find_network_req(unsigned char *buf, int len, unsigned short level);
 
 int fill_connection_params1_req(unsigned char *buf, int len);
 
