@@ -303,6 +303,7 @@ static int read_tap()
 	unsigned char buf[MAX_PACKET_LEN];
 	int hlen = get_D_header_len();
 	int r;
+	int len;
 
 	r = tap_read(tap_fd, buf + hlen, MAX_PACKET_LEN - hlen);
 
@@ -317,27 +318,11 @@ static int read_tap()
 		return 0;
 	}
 
-	if (buf[hlen + 0x0c] == 0x08 && buf[hlen + 0x0d] == 0x00)
-	{
-		int len;
+	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
+	debug_dumphexasc(1, "Outgoing packet:", buf, len);
+	r = set_data(buf, len);
 
-		debug_dumphexasc(1, "Outgoing packet:", buf + hlen, r);
-
-		len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
-		r = set_data(buf, len);
-		return r;
-	}
-
-	//if (buf[0x0c] == 0x08 && buf[0x0d] == 0x06)
-	//{
-	//	debug_msg(1, "Answered ARP packet\n");
-	//	// do processing here
-	//	return 0;
-	//}
-
-	debug_dumphexasc(1, "Skipped outgoing packet:", buf + hlen, r);
-
-	return 0;
+	return r;
 }
 
 static int process_events(int max_delay)
