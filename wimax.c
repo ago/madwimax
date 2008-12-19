@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include <ctype.h>
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
@@ -85,8 +86,8 @@ void debug_dumphexasc(int level, const char *msg, const void *buf, int len)
 	printf("%s\n", msg);
 	for (i = 0; i < len; i+=16) {
 		int j;
-		unsigned char hex[49];
-		unsigned char ascii[17];
+		char hex[49];
+		char ascii[17];
 		memset(hex, ' ', 48);
 		for(j = i; j < i + 16 && j < len; j++) {
 			sprintf(hex + ((j - i) * 3), " %02x", ((unsigned char*)buf)[j]);
@@ -353,7 +354,7 @@ static int scan_loop(void)
 
 			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.network_found);
 
-			sleep(2);
+			//sleep(2);
 
 			if (flag == 0 && wd_status.network_found == 1) {
 				flag = 1;
@@ -379,6 +380,7 @@ static int scan_loop(void)
 
 static int parse_args(int argc, char **argv)
 {
+	return 0;
 }
 
 static void exit_close_usb(int code);
@@ -462,5 +464,6 @@ int main(int argc, char **argv)
 	}
 
 	exit_release_resources(0);
+	return 0;
 }
 

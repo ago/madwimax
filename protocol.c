@@ -82,10 +82,13 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 		dev->state = (buf[0x1a] << 8) + buf[0x1b];
 		return 0;
 	}
+
+	return 0;
 }
 
 static int process_debug_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	return 0;
 }
 
 static int process_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
@@ -106,18 +109,23 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 			debug_msg(0, "bad format\n");
 			return -1;
 	}
+
+	return 0;
 }
 
 static int process_D_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	return 0;
 }
 
 static int process_E_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	return 0;
 }
 
 static int process_P_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	return 0;
 }
 
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)

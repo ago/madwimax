@@ -118,7 +118,7 @@ failed:
 
 #endif /* New driver support */
 
-int tap_set_hwaddr(int fd, char *dev, char *hwaddr)
+int tap_set_hwaddr(int fd, char *dev, unsigned char *hwaddr)
 {
         struct ifreq ifr;
 
