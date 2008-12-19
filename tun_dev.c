@@ -118,7 +118,7 @@ failed:
 
 #endif /* New driver support */
 
-int tap_set_hwaddr(int fd, char *dev, unsigned char *hwaddr)
+int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 {
         struct ifreq ifr;
 
@@ -136,6 +136,35 @@ int tap_set_hwaddr(int fd, char *dev, unsigned char *hwaddr)
         /* we're out of here! */
         return 0;
 }
+
+static int tap_get_ifflags(int fd, const char *dev, int *flags)
+{
+	struct ifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
+        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
+	if (ioctl(fd, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
+		perror("ioctl[SIOCGIFFLAGS]");
+		return -1;
+	}
+	*flags = ifr.ifr_flags & 0xffff;
+	return 0;
+}
+
+static int tap_set_ifflags(int fd, const char *dev, int flags)
+{
+	struct ifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
+        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
+	ifr.ifr_flags = flags & 0xffff;
+	if (ioctl(fd, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
+		perror("SIOCSIFFLAGS");
+		return -1;
+	}
+	return 0;
+}
+
 
 int tun_open(char *dev) { return tun_open_common(dev, 1); }
 int tap_open(char *dev) { return tun_open_common(dev, 0); }
