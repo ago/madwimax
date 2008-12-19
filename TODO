@@ -1,0 +1,8 @@
+ * Adopt getopt
+ * Adopt autotools
+ * Change link status of the TAP interface when connected to/disconnected
+   from the WiMax network
+ * Add support for debug messages
+ * Get geographical information from GPS if available and write them to
+   the log along with connection status/parameters
+

@@ -1,0 +1,13 @@
+This is MadWimax, a proof-of-concept driver for Samsung SWC-U200 Mobile WiMax
+dongle.
+
+MadWimax is provided "as is" with no warranty. The exact terms
+under which you may use and (re)distribute this program are detailed
+in the GNU General Public License, in the file COPYING.
+
+See the file INSTALL for compilation and installation instructions.
+
+See the file NEWS for a description of major changes in this release.
+
+See the file TODO for ideas on how you could help us improve MadWimax.
+

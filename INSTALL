@@ -1,0 +1,21 @@
+MadWimax: INSTALL
+
+These are the essential steps for compiling and installing this
+software.
+
+Prerequisites
+-------------
+
+ * Linux kernel with TUN/TAP support
+ * libusb-1.0 (http://libusb.wiki.sourceforge.net/Libusb1.0)
+
+Compiling
+---------
+
+Run 'make'.
+
+Installing
+----------
+
+Copy the resulting binary to whereever you want :).
+
