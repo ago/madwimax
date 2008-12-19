@@ -28,14 +28,15 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	short type_a = (buf[0x14] << 8) + buf[0x15];
 	short type_b = (buf[0x16] << 8) + buf[0x17];
 	short param_len = (buf[0x18] << 8) + buf[0x19];
-	dev->info_updated = 1;
+
 	if (type_a == 0x8 && type_b == 0x2) {
 		if (param_len != 0x80) {
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		memcpy(dev->chip_info, buf + 0x1a, 0x40);
-		memcpy(dev->firmware_info, buf + 0x5a, 0x40);
+		memcpy(dev->chip, buf + 0x1a, 0x40);
+		memcpy(dev->firmware, buf + 0x5a, 0x40);
+		dev->info_updated |= WDS_CHIP | WDS_FIRMWARE;
 		return 0;
 	}
 	if (type_a == 0x3 && type_b == 0x2) {
@@ -44,6 +45,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			return -1;
 		}
 		memcpy(dev->mac, buf + 0x1a, 0x6);
+		dev->info_updated |= WDS_MAC;
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0x2) {
@@ -51,7 +53,8 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->network_found = (buf[0x1a] << 8) + buf[0x1b];
+		dev->net_found = (buf[0x1a] << 8) + buf[0x1b];
+		dev->info_updated |= WDS_NET_FOUND;
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0x3) {
@@ -59,7 +62,8 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->network_found = 0;
+		dev->net_found = 0;
+		dev->info_updated |= WDS_NET_FOUND;
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0xa) {
@@ -72,6 +76,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 		memcpy(dev->bsid, buf + 0x1e, 0x6);
 		dev->txpwr = (buf[0x26] << 8) + buf[0x27];
 		dev->freq = (buf[0x28] << 24) + (buf[0x29] << 16) + (buf[0x2a] << 8) + buf[0x2b];
+		dev->info_updated |= WDS_RSSI | WDS_CINR | WDS_BSID | WDS_TXPWR | WDS_FREQ;
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0xc) {
@@ -80,8 +85,11 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			return -1;
 		}
 		dev->state = (buf[0x1a] << 8) + buf[0x1b];
+		dev->info_updated |= WDS_STATE;
 		return 0;
 	}
+
+	dev->info_updated |= WDS_OTHER;
 
 	return 0;
 }
@@ -115,6 +123,7 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 
 static int process_D_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	write_netif(buf + 0x06, len - 0x06);
 	return 0;
 }
 
@@ -166,6 +175,7 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 			return -1;
 	}
 }
+
 
 static void fill_C_req(unsigned char *buf, int len)
 {
@@ -248,5 +258,20 @@ int fill_connection_params2_req(unsigned char *buf, int len)
 int fill_state_req(unsigned char *buf, int len)
 {
 	return fill_normal_C_req(buf, 0x1, 0xb, 0x0, NULL);
+}
+
+
+int get_D_header_len()
+{
+	return 6;
+}
+
+int fill_outgoing_packet_header(unsigned char *buf, int len, int body_len)
+{
+	buf[0x00] = 0x57;
+	buf[0x01] = 0x44;
+	buf[0x02] = body_len & 0xff;
+	buf[0x03] = (body_len >> 8) & 0xff;
+	return body_len + 6;
 }
 

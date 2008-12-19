@@ -24,6 +24,7 @@
 
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len);
 
+
 int fill_string_info_req(unsigned char *buf, int len);
 
 int fill_init1_req(unsigned char *buf, int len);
@@ -43,6 +44,11 @@ int fill_connection_params1_req(unsigned char *buf, int len);
 int fill_connection_params2_req(unsigned char *buf, int len);
 
 int fill_state_req(unsigned char *buf, int len);
+
+
+int get_D_header_len();
+
+int fill_outgoing_packet_header(unsigned char *buf, int len, int body_len);
 
 #endif // _PROTOCOL_H
 

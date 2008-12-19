@@ -144,9 +144,9 @@ int tun_close(int fd, char *dev) { return close(fd); }
 int tap_close(int fd, char *dev) { return close(fd); }
 
 /* Read/write frames from TUN device */
-int tun_write(int fd, char *buf, int len) { return write(fd, buf, len); }
-int tap_write(int fd, char *buf, int len) { return write(fd, buf, len); }
+int tun_write(int fd, const void *buf, int len) { return write(fd, buf, len); }
+int tap_write(int fd, const void *buf, int len) { return write(fd, buf, len); }
 
-int tun_read(int fd, char *buf, int len) { return read(fd, buf, len); }
-int tap_read(int fd, char *buf, int len) { return read(fd, buf, len); }
+int tun_read(int fd, void *buf, int len) { return read(fd, buf, len); }
+int tap_read(int fd, void *buf, int len) { return read(fd, buf, len); }
 

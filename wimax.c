@@ -19,11 +19,13 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <poll.h>
 #include <signal.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <libusb-1.0/libusb.h>
 
@@ -51,6 +53,9 @@ static char tap_dev[20];
 static struct wimax_dev_status wd_status;
 static int wimax_debug_level = 1;
 
+static nfds_t nfds;
+static struct pollfd* fds = NULL;
+
 char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
 
 static void exit_release_resources(int code);
@@ -65,7 +70,7 @@ static int find_wimax_device(void)
 void debug_msg(int level, const char *fmt, ...)
 {
 	va_list va;
-	
+
 	if (level > wimax_debug_level) return;
 
 	va_start(va, fmt);
@@ -154,11 +159,16 @@ static int alloc_transfers(void)
 	req_transfer = libusb_alloc_transfer(0);
 	if (!req_transfer)
 		return -ENOMEM;
-	
+
 	libusb_fill_bulk_transfer(req_transfer, devh, EP_IN, read_buffer,
 		sizeof(read_buffer), cb_req, NULL, 0);
 
 	return 0;
+}
+
+int write_netif(const void *buf, int count)
+{
+	return tap_write(tap_fd, buf, count);
 }
 
 static int init(void)
@@ -196,7 +206,7 @@ static int init(void)
 	r = libusb_submit_transfer(req_transfer);
 	if (r < 0)
 		return r;
-	
+
 	req_in_progress = 1;
 	r = set_data(data3, sizeof(data3));
 	if (r < 0) {
@@ -215,8 +225,8 @@ static int init(void)
 			return r;
 	}
 
-	debug_msg(0, "Chip info: %s\n", wd_status.chip_info);
-	debug_msg(0, "Firmware info: %s\n", wd_status.firmware_info);
+	debug_msg(0, "Chip info: %s\n", wd_status.chip);
+	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
 
 	req_in_progress = 1;
 	len = fill_init1_req(req_data, MAX_PACKET_LEN);
@@ -288,30 +298,152 @@ static int init(void)
 	return 0;
 }
 
-int flag = 0;
+static int read_tap()
+{
+	unsigned char buf[MAX_PACKET_LEN];
+	int hlen = get_D_header_len();
+	int r;
+
+	r = tap_read(tap_fd, buf + hlen, MAX_PACKET_LEN - hlen);
+
+	if (r < 0)
+	{
+		debug_msg(0, "Error while reading from TAP interface");
+		return r;
+	}
+
+	if (r == 0)
+	{
+		return 0;
+	}
+
+	if (buf[hlen + 0x0c] == 0x08 && buf[hlen + 0x0d] == 0x00)
+	{
+		int len;
+
+		debug_dumphexasc(1, "Outgoing packet:", buf + hlen, r);
+
+		len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
+		r = set_data(buf, len);
+		return r;
+	}
+
+	//if (buf[0x0c] == 0x08 && buf[0x0d] == 0x06)
+	//{
+	//	debug_msg(1, "Answered ARP packet\n");
+	//	// do processing here
+	//	return 0;
+	//}
+
+	debug_dumphexasc(1, "Skipped outgoing packet:", buf + hlen, r);
+
+	return 0;
+}
+
+static int process_events(int max_delay)
+{
+	struct timeval tv;
+	int r;
+	int delay;
+	int i;
+
+	r = libusb_get_next_timeout(NULL, &tv);
+	if (r == 1 && tv.tv_sec == 0 && tv.tv_usec == 0)
+	{
+		r = libusb_handle_events(NULL);
+	}
+
+	delay = tv.tv_sec * 1000 + tv.tv_usec;
+	if (delay == 0 || delay > max_delay)
+	{
+		delay = max_delay;
+	}
+
+	r = poll(fds, nfds, delay);
+	if (r < 0)
+	{
+		return r;
+	}
+
+	if (fds[nfds - 1].revents)
+	{
+		r = read_tap();
+		if (r < 0)
+		{
+			return r;
+		}
+	}
+
+	char process_libusb = 0;
+	for (i = 0; i < nfds - 1; ++i)
+	{
+		process_libusb |= fds[i].revents;
+	}
+
+	if (process_libusb)
+	{
+		r = libusb_handle_events(NULL);
+		if (r < 0)
+		{
+			return r;
+		}
+	}
+	return 0;
+}
+
+
+static int flag = 0;
 
 static int scan_loop(void)
 {
 	unsigned char req_data[MAX_PACKET_LEN];
 	int len;
 	int r;
+	int i;
+	const struct libusb_pollfd **usb_fds = libusb_get_pollfds(NULL);
 
-	while (1) {
-		if (wd_status.network_found == 0) {
+	if (!usb_fds)
+	{
+		return -1;
+	}
+
+	nfds = 0;
+	while (usb_fds[nfds])
+	{
+		nfds++;
+	}
+	nfds++;
+
+	fds = (struct pollfd*)calloc(nfds, sizeof(struct pollfd));
+	for (i = 0; usb_fds[i]; ++i)
+	{
+		fds[i].fd = usb_fds[i]->fd;
+		fds[i].events = usb_fds[i]->events;
+	}
+	fds[nfds - 1].fd = tap_fd;
+	fds[nfds - 1].events = POLLIN;
+
+	//TODO: set pollfd notifiers
+	free(usb_fds);
+	while (1)
+	{
+		process_events(2000);
+
+		if (wd_status.net_found == 0) {
 			wd_status.info_updated = 0;
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
 			r = set_data(req_data, len);
 			if (r < 0) {
 				return r;
 			}
-	
+
 			while (wd_status.info_updated == 0) {
-				r = libusb_handle_events(NULL);
+				r = process_events(0);
 				if (r < 0)
 					return r;
 			}
-	
-			if (wd_status.network_found == 0) {
+
+			if (wd_status.net_found == 0) {
 				debug_msg(0, "Network not found.\n");
 			} else {
 				debug_msg(0, "Network found.\n");
@@ -331,7 +463,7 @@ static int scan_loop(void)
 			}
 
 			while (wd_status.info_updated == 0) {
-				r = libusb_handle_events(NULL);
+				r = process_events(0);
 				if (r < 0)
 					return r;
 			}
@@ -347,16 +479,16 @@ static int scan_loop(void)
 			}
 
 			while (wd_status.info_updated == 0) {
-				r = libusb_handle_events(NULL);
+				r = process_events(0);
 				if (r < 0)
 					return r;
 			}
 
-			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.network_found);
+			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.net_found);
 
 			//sleep(2);
 
-			if (flag == 0 && wd_status.network_found == 1) {
+			if (flag == 0 && wd_status.net_found == 1) {
 				flag = 1;
 				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
 				r = set_data(req_data, len);
@@ -365,13 +497,13 @@ static int scan_loop(void)
 				}
 
 				while (wd_status.info_updated == 0) {
-					r = libusb_handle_events(NULL);
+					r = process_events(0);
 					if (r < 0)
 						return r;
 				}
 			}
 		}
-		if (wd_status.network_found != 1)
+		if (wd_status.net_found != 1)
 		{
 			flag = 0;
 		}
@@ -393,6 +525,9 @@ static void exit_release_resources(int code)
 	}
 	if(tap_fd >= 0) {
 		tap_close(tap_fd, tap_dev);
+	}
+	if(fds != NULL) {
+		free(fds);
 	}
 	libusb_release_interface(devh, 0);
 	exit_close_usb(code);

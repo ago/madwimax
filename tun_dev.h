@@ -28,5 +28,11 @@ int tap_close(int fd, char *dev);
 
 int tap_set_hwaddr(int fd, char *dev, unsigned char *hwaddr);
 
+int tun_write(int fd, const void *buf, int len);
+int tap_write(int fd, const void *buf, int len);
+
+int tun_read(int fd, void *buf, int len);
+int tap_read(int fd, void *buf, int len);
+
 #endif // _TUN_DEV_H
 

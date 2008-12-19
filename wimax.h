@@ -20,12 +20,24 @@
 #ifndef _WIMAX_H
 #define _WIMAX_H
 
+#define WDS_CHIP	0x001
+#define WDS_FIRMWARE	0x002
+#define WDS_MAC		0x004
+#define WDS_NET_FOUND	0x008
+#define WDS_RSSI	0x010
+#define WDS_CINR	0x020
+#define WDS_BSID	0x040
+#define WDS_TXPWR	0x080
+#define WDS_FREQ	0x100
+#define WDS_STATE	0x200
+#define WDS_OTHER	0x800
+
 struct wimax_dev_status {
-	int info_updated;
-	char chip_info[0x40];
-	char firmware_info[0x40];
+	unsigned int info_updated;
+	char chip[0x40];
+	char firmware[0x40];
 	unsigned char mac[6];
-	int network_found;
+	int net_found;
 	short rssi;
 	float cinr;
 	unsigned char bsid[6];
@@ -39,6 +51,9 @@ void debug_msg(int level, const char *fmt, ...);
 
 /* dump message msg and len bytes from buf in hexadecimal and ASCII. */
 void debug_dumphexasc(int level, const char *msg, const void *buf, int len);
+
+/* write packet to the network interface */
+int write_netif(const void *buf, int count);
 
 #endif // _WIMAX_H
 
