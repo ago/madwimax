@@ -476,7 +476,7 @@ static int scan_loop(void)
 				return r;
 			}
 
-			process_events_by_mask(WDS_NET_FOUND, 5000);
+			process_events_by_mask(5000, WDS_NET_FOUND);
 
 			if (wd_status.net_found == 0) {
 				debug_msg(0, "Network not found.\n");
@@ -497,7 +497,7 @@ static int scan_loop(void)
 				return r;
 			}
 
-			process_events_by_mask(WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID, 500);
+			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
 
 			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d\n", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
 			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
@@ -509,7 +509,7 @@ static int scan_loop(void)
 				return r;
 			}
 
-			process_events_by_mask(WDS_STATE, 500);
+			process_events_by_mask(500, WDS_STATE);
 
 			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.net_found);
 
@@ -523,7 +523,7 @@ static int scan_loop(void)
 				}
 			}
 
-			process_events_by_mask(WDS_NET_FOUND, 5000);
+			process_events_by_mask(5000, WDS_NET_FOUND);
 		}
 		if (wd_status.net_found != 1)
 		{
