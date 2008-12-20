@@ -351,7 +351,7 @@ static int process_events(int max_delay)
 		return r;
 	}
 
-	if (fds[nfds - 1].revents)
+	if (fds[nfds - 1].revents && wd_status.state == 3)
 	{
 		r = read_tap();
 		if (r < 0)
