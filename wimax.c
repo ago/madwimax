@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include <libusb-1.0/libusb.h>
 
@@ -51,7 +52,7 @@ static int tap_fd = -1;
 static char tap_dev[20];
 
 static struct wimax_dev_status wd_status;
-static int wimax_debug_level = 1;
+static int wimax_debug_level = 0;
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
@@ -376,14 +377,8 @@ static int process_events(int max_delay)
 	return 0;
 }
 
-
-static int flag = 0;
-
-static int scan_loop(void)
+int alloc_fds()
 {
-	unsigned char req_data[MAX_PACKET_LEN];
-	int len;
-	int r;
 	int i;
 	const struct libusb_pollfd **usb_fds = libusb_get_pollfds(NULL);
 
@@ -399,6 +394,10 @@ static int scan_loop(void)
 	}
 	nfds++;
 
+	if(fds != NULL) {
+		free(fds);
+	}
+
 	fds = (struct pollfd*)calloc(nfds, sizeof(struct pollfd));
 	for (i = 0; usb_fds[i]; ++i)
 	{
@@ -407,9 +406,34 @@ static int scan_loop(void)
 	}
 	fds[nfds - 1].fd = tap_fd;
 	fds[nfds - 1].events = POLLIN;
+	fds[nfds - 1].revents = 0;
 
-	//TODO: set pollfd notifiers
 	free(usb_fds);
+
+	return 0;
+}
+
+void cb_added_pollfd(int fd, short events, void *user_data)
+{
+	alloc_fds();
+}
+
+void cb_removed_pollfd(int fd, void *user_data)
+{
+	alloc_fds();
+}
+
+static int flag = 0;
+
+static int scan_loop(void)
+{
+	unsigned char req_data[MAX_PACKET_LEN];
+	int len;
+	int r;
+
+	alloc_fds();
+	libusb_set_pollfd_notifiers(NULL, cb_added_pollfd, cb_removed_pollfd, NULL);
+
 	while (1)
 	{
 		process_events(2000);
@@ -511,6 +535,7 @@ static void exit_release_resources(int code)
 	if(tap_fd >= 0) {
 		tap_close(tap_fd, tap_dev);
 	}
+	libusb_set_pollfd_notifiers(NULL, NULL, NULL, NULL);
 	if(fds != NULL) {
 		free(fds);
 	}
