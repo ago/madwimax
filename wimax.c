@@ -319,13 +319,9 @@ static int read_tap()
 		return 0;
 	}
 
-	if (wd_status.state == 3) {
-		len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
-		debug_dumphexasc(1, "Outgoing packet:", buf, len);
-		r = set_data(buf, len);
-	} else {
-		debug_msg(0, "Packet dropped because the state is not NORMAL.\n");
-	}
+	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
+	debug_dumphexasc(1, "Outgoing packet:", buf, len);
+	r = set_data(buf, len);
 
 	return r;
 }
