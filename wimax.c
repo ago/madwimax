@@ -310,7 +310,7 @@ static int read_tap()
 
 	if (r < 0)
 	{
-		debug_msg(0, "Error while reading from TAP interface");
+		debug_msg(0, "Error while reading from TAP interface\n");
 		return r;
 	}
 
@@ -324,7 +324,7 @@ static int read_tap()
 		debug_dumphexasc(1, "Outgoing packet:", buf, len);
 		r = set_data(buf, len);
 	} else {
-		debug_msg(0, "Packet dropped because the state is not NORMAL.");
+		debug_msg(0, "Packet dropped because the state is not NORMAL.\n");
 	}
 
 	return r;
