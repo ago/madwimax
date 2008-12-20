@@ -319,9 +319,13 @@ static int read_tap()
 		return 0;
 	}
 
-	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
-	debug_dumphexasc(1, "Outgoing packet:", buf, len);
-	r = set_data(buf, len);
+	if (wd_status.state == 3) {
+		len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
+		debug_dumphexasc(1, "Outgoing packet:", buf, len);
+		r = set_data(buf, len);
+	} else {
+		debug_msg(0, "Packet dropped because the state is not NORMAL.");
+	}
 
 	return r;
 }
@@ -330,8 +334,10 @@ static int process_events(int max_delay)
 {
 	struct timeval tv;
 	int r;
+	int libusb_delay;
 	int delay;
 	int i;
+	char process_libusb = 0;
 
 	r = libusb_get_next_timeout(NULL, &tv);
 	if (r == 1 && tv.tv_sec == 0 && tv.tv_usec == 0)
@@ -339,7 +345,7 @@ static int process_events(int max_delay)
 		r = libusb_handle_events(NULL);
 	}
 
-	delay = tv.tv_sec * 1000 + tv.tv_usec;
+	delay = libusb_delay = tv.tv_sec * 1000 + tv.tv_usec;
 	if (delay == 0 || delay > max_delay)
 	{
 		delay = max_delay;
@@ -351,7 +357,9 @@ static int process_events(int max_delay)
 		return r;
 	}
 
-	if (fds[nfds - 1].revents && wd_status.state == 3)
+	process_libusb = (r == 0 && delay == libusb_delay);
+
+	if (fds[nfds - 1].revents)
 	{
 		r = read_tap();
 		if (r < 0)
@@ -360,8 +368,7 @@ static int process_events(int max_delay)
 		}
 	}
 
-	char process_libusb = 0;
-	for (i = 0; i < nfds - 1; ++i)
+	for (i = 0; i < nfds - 1 && !process_libusb; ++i)
 	{
 		process_libusb |= fds[i].revents;
 	}
@@ -374,6 +381,7 @@ static int process_events(int max_delay)
 			return r;
 		}
 	}
+
 	return 0;
 }
 
