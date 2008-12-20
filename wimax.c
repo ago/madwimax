@@ -330,7 +330,7 @@ static int read_tap()
 	return r;
 }
 
-static int process_events(int max_delay)
+static int process_events(int timeout)
 {
 	struct timeval tv;
 	int r;
@@ -346,9 +346,9 @@ static int process_events(int max_delay)
 	}
 
 	delay = libusb_delay = tv.tv_sec * 1000 + tv.tv_usec;
-	if (delay == 0 || delay > max_delay)
+	if (delay == 0 || delay > timeout)
 	{
-		delay = max_delay;
+		delay = timeout;
 	}
 
 	r = poll(fds, nfds, delay);
@@ -383,6 +383,30 @@ static int process_events(int max_delay)
 	}
 
 	return 0;
+}
+
+/* handle events until timeout is reached or one of the events in event_mask happen */
+static int process_events_by_mask(int timeout, int event_mask)
+{
+	struct timeval start, curr;
+	int r;
+	int delay = timeout;
+
+	r = gettimeofday(&start, NULL);
+	if (r < 0)
+		return r;
+
+	while ((wd_status.info_updated & event_mask) == 0 && delay >= 0) {
+		r = process_events(delay);
+		if (r < 0)
+			return r;
+		r = gettimeofday(&curr, NULL);
+		if (r < 0)
+			return r;
+		delay -= (curr.tv_sec - start.tv_sec) * 1000 + curr.tv_usec - start.tv_usec;
+	}
+
+	return delay;
 }
 
 int alloc_fds()
@@ -444,8 +468,6 @@ static int scan_loop(void)
 
 	while (1)
 	{
-		process_events(2000);
-
 		if (wd_status.net_found == 0) {
 			wd_status.info_updated = 0;
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
@@ -454,11 +476,7 @@ static int scan_loop(void)
 				return r;
 			}
 
-			while (wd_status.info_updated == 0) {
-				r = process_events(0);
-				if (r < 0)
-					return r;
-			}
+			process_events_by_mask(WDS_NET_FOUND, 5000);
 
 			if (wd_status.net_found == 0) {
 				debug_msg(0, "Network not found.\n");
@@ -479,11 +497,7 @@ static int scan_loop(void)
 				return r;
 			}
 
-			while (wd_status.info_updated == 0) {
-				r = process_events(0);
-				if (r < 0)
-					return r;
-			}
+			process_events_by_mask(WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID, 500);
 
 			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d\n", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
 			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
@@ -495,30 +509,21 @@ static int scan_loop(void)
 				return r;
 			}
 
-			while (wd_status.info_updated == 0) {
-				r = process_events(0);
-				if (r < 0)
-					return r;
-			}
+			process_events_by_mask(WDS_STATE, 500);
 
 			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.net_found);
 
-			//sleep(2);
-
 			if (flag == 0 && wd_status.net_found == 1) {
 				flag = 1;
+				wd_status.info_updated = 0;
 				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
 				r = set_data(req_data, len);
 				if (r < 0) {
 					return r;
 				}
-
-				while (wd_status.info_updated == 0) {
-					r = process_events(0);
-					if (r < 0)
-						return r;
-				}
 			}
+
+			process_events_by_mask(WDS_NET_FOUND, 5000);
 		}
 		if (wd_status.net_found != 1)
 		{

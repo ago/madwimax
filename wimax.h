@@ -20,6 +20,7 @@
 #ifndef _WIMAX_H
 #define _WIMAX_H
 
+#define WDS_NONE	0x000
 #define WDS_CHIP	0x001
 #define WDS_FIRMWARE	0x002
 #define WDS_MAC		0x004
