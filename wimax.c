@@ -397,13 +397,18 @@ static int process_events_by_mask(int timeout, int event_mask)
 		return r;
 
 	while ((wd_status.info_updated & event_mask) == 0 && delay >= 0) {
+		long a;
+
 		r = process_events(delay);
 		if (r < 0)
 			return r;
+
 		r = gettimeofday(&curr, NULL);
 		if (r < 0)
 			return r;
-		delay -= (curr.tv_sec - start.tv_sec) * 1000 + curr.tv_usec - start.tv_usec;
+
+		a = (curr.tv_sec - start.tv_sec) * 1000 + (curr.tv_usec - start.tv_usec) / 1000;
+		delay = timeout - a;
 	}
 
 	return delay;
