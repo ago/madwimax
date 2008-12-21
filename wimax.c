@@ -19,6 +19,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <getopt.h>
 #include <poll.h>
 #include <signal.h>
 #include <string.h>
@@ -53,6 +54,7 @@ static char tap_dev[20];
 
 static struct wimax_dev_status wd_status;
 static int wimax_debug_level = 0;
+static int daemonize = 0;
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
@@ -533,9 +535,62 @@ static int scan_loop(void)
 	}
 }
 
-static int parse_args(int argc, char **argv)
+static void usage(char *progname)
 {
-	return 0;
+	printf("Usage: %s [options]\n", progname);
+	printf("Options:\n");
+	printf("  -v, --verbose    increase the debugging level\n");
+	printf("  -q, --quiet      don't print on the console\n");
+	printf("  -d, --daemonize  daemonize after startup\n");
+	printf("  -h, --help       display this help\n");
+}
+
+static void parse_args(int argc, char **argv)
+{
+	while (1)
+	{
+		int c;
+		/* getopt_long stores the option index here. */
+		int option_index = 0;
+		static struct option long_options[] =
+		{
+			{"verbose",	no_argument,		0, 'v'},
+			{"quiet",	no_argument,		0, 'q'},
+			{"daemonize",	no_argument,		0, 'd'},
+			{"help",	no_argument,		0, 'h'},
+			{0, 0, 0, 0}
+		};
+
+		c = getopt_long(argc, argv, "vqdh", long_options, &option_index);
+
+		/* detect the end of the options. */
+		if (c == -1)
+			break;
+
+		switch (c)
+		{
+			case 'v':
+				wimax_debug_level++;
+				break;
+			case 'q':
+				wimax_debug_level = -1;
+				break;
+			case 'd':
+				daemonize = 1;
+				break;
+			case 'h':
+				usage(argv[0]);
+				exit(0);
+				break;
+			case '?':
+				/* getopt_long already printed an error message. */
+				usage(argv[0]);
+				exit(1);
+				break;
+			default:
+				exit(1);
+		}
+	}
 }
 
 static void exit_close_usb(int code);
@@ -615,6 +670,12 @@ int main(int argc, char **argv)
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
+
+	if (daemonize) {
+		debug_msg(0, "Daemonizing...\n");
+		wimax_debug_level = -1;
+		daemon(0, 0);
+	}
 
 	r = scan_loop();
 	if (r < 0) {
