@@ -220,17 +220,17 @@ int fill_mac_req(unsigned char *buf, int len)
 	return fill_normal_C_req(buf, 0x3, 0x1, 0x0, NULL);
 }
 
-int fill_init2_req(unsigned char *buf, int len)
+int fill_auth_policy_req(unsigned char *buf, int len)
 {
 	return fill_normal_C_req(buf, 0x20, 0x8, 0x0, NULL);
 }
 
-int fill_init3_req(unsigned char *buf, int len)
+int fill_auth_method_req(unsigned char *buf, int len)
 {
 	return fill_normal_C_req(buf, 0x20, 0xc, 0x0, NULL);
 }
 
-int fill_authorization_data_req(unsigned char *buf, int len)
+int fill_auth_set_cmd(unsigned char *buf, int len)
 {
 	unsigned char param[0xd] = {0x00, 0x10, 0x00, 0x09, 0x40, 0x79, 0x6f, 0x74, 0x61, 0x2e, 0x72, 0x75, 0x00};
 	return fill_normal_C_req(buf, 0x20, 0x20, sizeof(param), param);
@@ -257,6 +257,12 @@ int fill_connection_params2_req(unsigned char *buf, int len)
 int fill_state_req(unsigned char *buf, int len)
 {
 	return fill_normal_C_req(buf, 0x1, 0xb, 0x0, NULL);
+}
+
+int fill_network_list_req(unsigned char *buf, int len)
+{
+	unsigned char param[0x2] = {0x00, 0x00};
+	return fill_normal_C_req(buf, 0x24, 0x1, sizeof(param), param);
 }
 
 

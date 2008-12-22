@@ -266,7 +266,7 @@ static int init(void)
 	}
 
 	req_in_progress = 1;
-	len = fill_init2_req(req_data, MAX_PACKET_LEN);
+	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
 	r = set_data(req_data, len);
 	if (r < 0) {
 		return r;
@@ -279,7 +279,7 @@ static int init(void)
 	}
 
 	req_in_progress = 1;
-	len = fill_init3_req(req_data, MAX_PACKET_LEN);
+	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
 	r = set_data(req_data, len);
 	if (r < 0) {
 		return r;
@@ -292,7 +292,7 @@ static int init(void)
 	}
 
 	req_in_progress = 1;
-	len = fill_authorization_data_req(req_data, MAX_PACKET_LEN);
+	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
 	r = set_data(req_data, len);
 	if (r < 0) {
 		return r;
