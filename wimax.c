@@ -53,8 +53,10 @@ static int tap_fd = -1;
 static char tap_dev[20];
 
 static struct wimax_dev_status wd_status;
+
 static int wimax_debug_level = 0;
 static int daemonize = 0;
+static int diode_on = 1;
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
@@ -232,7 +234,7 @@ static int init(void)
 	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
 
 	req_in_progress = 1;
-	len = fill_init1_req(req_data, MAX_PACKET_LEN);
+	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
 	r = set_data(req_data, len);
 	if (r < 0) {
 		return r;
@@ -542,6 +544,7 @@ static void usage(char *progname)
 	printf("  -v, --verbose    increase the debugging level\n");
 	printf("  -q, --quiet      don't print on the console\n");
 	printf("  -d, --daemonize  daemonize after startup\n");
+	printf("  -o, --diode-off  turn off the diode (on by default)\n");
 	printf("  -h, --help       display this help\n");
 }
 
@@ -557,11 +560,12 @@ static void parse_args(int argc, char **argv)
 			{"verbose",	no_argument,		0, 'v'},
 			{"quiet",	no_argument,		0, 'q'},
 			{"daemonize",	no_argument,		0, 'd'},
+			{"diode-off",	no_argument,		0, 'o'},
 			{"help",	no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "vqdh", long_options, &option_index);
+		c = getopt_long(argc, argv, "vqdoh", long_options, &option_index);
 
 		/* detect the end of the options. */
 		if (c == -1)
@@ -577,6 +581,9 @@ static void parse_args(int argc, char **argv)
 				break;
 			case 'd':
 				daemonize = 1;
+				break;
+			case 'o':
+				diode_on = 0;
 				break;
 			case 'h':
 				usage(argv[0]);

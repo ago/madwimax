@@ -27,7 +27,7 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 
 int fill_string_info_req(unsigned char *buf, int len);
 
-int fill_init1_req(unsigned char *buf, int len);
+int fill_diode_control_cmd(unsigned char *buf, int len, int turn_on);
 
 int fill_mac_req(unsigned char *buf, int len);
 

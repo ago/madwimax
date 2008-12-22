@@ -209,9 +209,9 @@ int fill_string_info_req(unsigned char *buf, int len)
 	return fill_normal_C_req(buf, 0x8, 0x1, 0x0, NULL);
 }
 
-int fill_init1_req(unsigned char *buf, int len)
+int fill_diode_control_cmd(unsigned char *buf, int len, int turn_on)
 {
-	unsigned char param[0x2] = {0x0, 0x1};
+	unsigned char param[0x2] = {0x0, turn_on ? 0x1 : 0x0};
 	return fill_normal_C_req(buf, 0x30, 0x1, sizeof(param), param);
 }
 
