@@ -1,4 +1,3 @@
- * Adopt getopt
  * Adopt autotools
  * Add man page and docs
  * Change link status of the TAP interface when connected to/disconnected
