@@ -43,6 +43,9 @@
 
 #define MAX_PACKET_LEN		0x4000
 
+#define CHECK_NEGATIVE(x) {if((r = (x)) < 0) return r;}
+
+
 static struct libusb_device_handle *devh = NULL;
 static struct libusb_transfer *req_transfer = NULL;
 
@@ -187,49 +190,27 @@ static int init(void)
 	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
 			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
 			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
-	r = get_data(read_buffer, sizeof(read_buffer));
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
 
-	r = set_data(data2, sizeof(data2));
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(data2, sizeof(data2)));
 
-	r = get_data(read_buffer, sizeof(read_buffer));
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
 
 	alloc_transfers();
 
 	debug_msg(0, "Continuous async read start...\n");
-	r = libusb_submit_transfer(req_transfer);
-	if (r < 0)
-		return r;
+	CHECK_NEGATIVE(libusb_submit_transfer(req_transfer));
 
 	req_in_progress = 1;
-	r = set_data(data3, sizeof(data3));
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(data3, sizeof(data3)));
 
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	while (req_in_progress) {
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	debug_msg(0, "Chip info: %s\n", wd_status.chip);
@@ -237,70 +218,44 @@ static int init(void)
 
 	req_in_progress = 1;
 	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	len = fill_mac_req(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	while (req_in_progress) {
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
 	req_in_progress = 1;
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	while (req_in_progress) {
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	req_in_progress = 1;
 	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	while (req_in_progress) {
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	req_in_progress = 1;
 	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	while (req_in_progress) {
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	req_in_progress = 1;
 	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
-	r = set_data(req_data, len);
-	if (r < 0) {
-		return r;
-	}
+	CHECK_NEGATIVE(set_data(req_data, len));
 
 	return 0;
 }
@@ -332,7 +287,7 @@ static int read_tap()
 	return r;
 }
 
-static int process_events(int timeout)
+static int process_events_once(int timeout)
 {
 	struct timeval tv;
 	int r;
@@ -353,21 +308,13 @@ static int process_events(int timeout)
 		delay = timeout;
 	}
 
-	r = poll(fds, nfds, delay);
-	if (r < 0)
-	{
-		return r;
-	}
+	CHECK_NEGATIVE(poll(fds, nfds, delay));
 
 	process_libusb = (r == 0 && delay == libusb_delay);
 
 	if (fds[nfds - 1].revents)
 	{
-		r = read_tap();
-		if (r < 0)
-		{
-			return r;
-		}
+		CHECK_NEGATIVE(read_tap());
 	}
 
 	for (i = 0; i < nfds - 1 && !process_libusb; ++i)
@@ -377,11 +324,7 @@ static int process_events(int timeout)
 
 	if (process_libusb)
 	{
-		r = libusb_handle_events(NULL);
-		if (r < 0)
-		{
-			return r;
-		}
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	return 0;
@@ -394,20 +337,14 @@ static int process_events_by_mask(int timeout, int event_mask)
 	int r;
 	int delay = timeout;
 
-	r = gettimeofday(&start, NULL);
-	if (r < 0)
-		return r;
+	CHECK_NEGATIVE(gettimeofday(&start, NULL));
 
 	while ((wd_status.info_updated & event_mask) == 0 && delay >= 0) {
 		long a;
 
-		r = process_events(delay);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(process_events_once(delay));
 
-		r = gettimeofday(&curr, NULL);
-		if (r < 0)
-			return r;
+		CHECK_NEGATIVE(gettimeofday(&curr, NULL));
 
 		a = (curr.tv_sec - start.tv_sec) * 1000 + (curr.tv_usec - start.tv_usec) / 1000;
 		delay = timeout - a;
@@ -478,10 +415,7 @@ static int scan_loop(void)
 		if (wd_status.net_found == 0) {
 			wd_status.info_updated = 0;
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
-			r = set_data(req_data, len);
-			if (r < 0) {
-				return r;
-			}
+			CHECK_NEGATIVE(set_data(req_data, len));
 
 			process_events_by_mask(5000, WDS_NET_FOUND);
 
@@ -499,10 +433,7 @@ static int scan_loop(void)
 			//}
 
 			len = fill_connection_params2_req(req_data, MAX_PACKET_LEN);
-			r = set_data(req_data, len);
-			if (r < 0) {
-				return r;
-			}
+			CHECK_NEGATIVE(set_data(req_data, len));
 
 			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
 
@@ -511,10 +442,7 @@ static int scan_loop(void)
 
 			wd_status.info_updated = 0;
 			len = fill_state_req(req_data, MAX_PACKET_LEN);
-			r = set_data(req_data, len);
-			if (r < 0) {
-				return r;
-			}
+			CHECK_NEGATIVE(set_data(req_data, len));
 
 			process_events_by_mask(500, WDS_STATE);
 
@@ -524,10 +452,7 @@ static int scan_loop(void)
 				flag = 1;
 				wd_status.info_updated = 0;
 				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
-				r = set_data(req_data, len);
-				if (r < 0) {
-					return r;
-				}
+				CHECK_NEGATIVE(set_data(req_data, len));
 			}
 
 			process_events_by_mask(5000, WDS_NET_FOUND);
