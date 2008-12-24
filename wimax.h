@@ -31,10 +31,12 @@
 #define WDS_TXPWR	0x080
 #define WDS_FREQ	0x100
 #define WDS_STATE	0x200
+#define WDS_PROTO_FLAGS	0x400
 #define WDS_OTHER	0x800
 
 struct wimax_dev_status {
 	unsigned int info_updated;
+	unsigned char proto_flags;
 	char chip[0x40];
 	char firmware[0x40];
 	unsigned char mac[6];

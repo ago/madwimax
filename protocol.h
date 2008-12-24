@@ -22,8 +22,25 @@
 
 #include "wimax.h"
 
+#define USB_HOST_SUPPORT_EXTENDED_CMD			0x01
+#define USB_HOST_SUPPORT_MULTIPLE_MAC_REQ		0x02
+#define USB_HOST_SUPPORT_SELECTIVE_SUSPEND		0x04
+#define USB_HOST_SUPPORT_TRUNCATE_ETHERNET_HEADER	0x08
+#define USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER		0x10
+#define USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER		0x20
+#define USB_HOST_SUPPORT_DL_MULTI_PACKETS		0x40
+#define USB_HOST_SUPPORT_UL_MULTI_PACKETS		0x80
+
+
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len);
 
+
+/* 57 45 requests */
+
+int fill_protocol_info_req(unsigned char *buf, int len, unsigned char flags);
+
+
+/* 57 43 requests */
 
 int fill_string_info_req(unsigned char *buf, int len);
 
@@ -47,6 +64,8 @@ int fill_state_req(unsigned char *buf, int len);
 
 int fill_network_list_req(unsigned char *buf, int len);
 
+
+/* 57 44 requests */
 
 int get_D_header_len();
 

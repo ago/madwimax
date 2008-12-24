@@ -128,6 +128,10 @@ static int process_D_response(struct wimax_dev_status *dev, const unsigned char 
 
 static int process_E_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	if (buf[0x5] == 0x3) {
+		dev->proto_flags = buf[0x7];
+		dev->info_updated |= WDS_PROTO_FLAGS;
+	}
 	return 0;
 }
 
@@ -173,6 +177,20 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 			debug_msg(0, "bad response type: %02x\n", buf[1]);
 			return -1;
 	}
+}
+
+
+int fill_protocol_info_req(unsigned char *buf, int len, unsigned char flags)
+{
+	buf[0x00] = 0x57;
+	buf[0x01] = 0x45;
+	buf[0x02] = 0x04;
+	buf[0x03] = 0x00;
+	buf[0x04] = 0x00;
+	buf[0x05] = 0x02;
+	buf[0x06] = 0x00;
+	buf[0x07] = flags;
+	return 8;
 }
 
 
