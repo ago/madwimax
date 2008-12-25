@@ -1,9 +1,9 @@
-/*  
+/*
     VTun - Virtual Tunnel over TCP/IP network.
 
     Copyright (C) 1998-2008  Maxim Krasnyansky <max_mk@yahoo.com>
 
-    VTun has been derived from VPPP package by Maxim Krasnyansky. 
+    VTun has been derived from VPPP package by Maxim Krasnyansky.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 /*
  * $Id: tun_dev.c,v 1.4.2.1 2008/01/07 22:36:22 mtbishop Exp $
- */ 
+ */
 
 #define HAVE_LINUX_IF_TUN_H
 
@@ -36,38 +36,40 @@
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 
+#include "wimax.h"
 
-/* 
- * Allocate TUN device, returns opened fd. 
+
+/*
+ * Allocate TUN device, returns opened fd.
  * Stores dev name in the first arg(must be large enough).
- */  
+ */
 static int tun_open_common0(char *dev, int istun)
 {
-    char tunname[14];
-    int i, fd, err;
+	char tunname[14];
+	int i, fd, err;
 
-    if( *dev ) {
-       sprintf(tunname, "/dev/%s", dev);
-       return open(tunname, O_RDWR);
-    }
+	if( *dev ) {
+		sprintf(tunname, "/dev/%s", dev);
+		return open(tunname, O_RDWR);
+	}
 
-    sprintf(tunname, "/dev/%s", istun ? "tun" : "tap");
-    err = 0;
-    for(i=0; i < 255; i++){
-       sprintf(tunname + 8, "%d", i);
-       /* Open device */
-       if( (fd=open(tunname, O_RDWR)) > 0 ) {
-          strcpy(dev, tunname + 5);
-          return fd;
-       }
-       else if (errno != ENOENT)
-          err = errno;
-       else if (i)	/* don't try all 256 devices */
-          break;
-    }
-    if (err)
+	sprintf(tunname, "/dev/%s", istun ? "tun" : "tap");
+	err = 0;
+	for(i=0; i < 255; i++){
+		sprintf(tunname + 8, "%d", i);
+		/* Open device */
+		if( (fd=open(tunname, O_RDWR)) > 0 ) {
+			strcpy(dev, tunname + 5);
+			return fd;
+		}
+		else if (errno != ENOENT)
+			err = errno;
+		else if (i)	/* don't try all 256 devices */
+			break;
+	}
+	if (err)
 	errno = err;
-    return -1;
+	return -1;
 }
 
 #ifdef HAVE_LINUX_IF_TUN_H /* New driver support */
@@ -75,41 +77,41 @@ static int tun_open_common0(char *dev, int istun)
 
 #ifndef OTUNSETNOCSUM
 /* pre 2.4.6 compatibility */
-#define OTUNSETNOCSUM  (('T'<< 8) | 200) 
-#define OTUNSETDEBUG   (('T'<< 8) | 201) 
-#define OTUNSETIFF     (('T'<< 8) | 202) 
-#define OTUNSETPERSIST (('T'<< 8) | 203) 
-#define OTUNSETOWNER   (('T'<< 8) | 204)
+#define OTUNSETNOCSUM	(('T'<< 8) | 200)
+#define OTUNSETDEBUG	(('T'<< 8) | 201)
+#define OTUNSETIFF	(('T'<< 8) | 202)
+#define OTUNSETPERSIST	(('T'<< 8) | 203)
+#define OTUNSETOWNER	(('T'<< 8) | 204)
 #endif
 
 static int tun_open_common(char *dev, int istun)
 {
-    struct ifreq ifr;
-    int fd;
+	struct ifreq ifr;
+	int fd;
 
-    if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
-       return tun_open_common0(dev, istun);
+	if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
+		return tun_open_common0(dev, istun);
 
-    memset(&ifr, 0, sizeof(ifr));
-    ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) | IFF_NO_PI;
-    if (*dev)
-       strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = (istun ? IFF_TUN : IFF_TAP) | IFF_NO_PI;
+	if (*dev)
+		strncpy(ifr.ifr_name, dev, IFNAMSIZ);
 
-    if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
-       if (errno == EBADFD) {
-	  /* Try old ioctl */
- 	  if (ioctl(fd, OTUNSETIFF, (void *) &ifr) < 0) 
-	     goto failed;
-       } else
-          goto failed;
-    } 
+	if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
+		if (errno == EBADFD) {
+		/* Try old ioctl */
+ 		if (ioctl(fd, OTUNSETIFF, (void *) &ifr) < 0)
+			goto failed;
+		} else
+			goto failed;
+	}
 
-    strcpy(dev, ifr.ifr_name);
-    return fd;
+	strcpy(dev, ifr.ifr_name);
+	return fd;
 
 failed:
-    close(fd);
-    return -1;
+	close(fd);
+	return -1;
 }
 
 #else
@@ -118,64 +120,122 @@ failed:
 
 #endif /* New driver support */
 
-int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
+
+int tap_open(char *dev) { return tun_open_common(dev, 0); }
+
+int tap_close(int fd, char *dev) { return close(fd); }
+
+/* Read/write frames from TAP device */
+int tap_write(int fd, const void *buf, int len) { return write(fd, buf, len); }
+
+int tap_read(int fd, void *buf, int len) { return read(fd, buf, len); }
+
+
+/* Like strncpy but make sure the resulting string is always 0 terminated. */
+static char *safe_strncpy(char *dst, const char *src, size_t size)
 {
-        struct ifreq ifr;
-
-        /* Fill in the structure */
-        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
-        ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-        memcpy(&ifr.ifr_hwaddr.sa_data, hwaddr, ETH_ALEN);
-
-        /* call the IOCTL */
-        if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
-                perror("ioctl(SIOCSIFHWADDR)");
-                return -1;
-        }
-
-        /* we're out of here! */
-        return 0;
+	dst[size-1] = '\0';
+	return strncpy(dst,src,size-1);
 }
 
-static int tap_get_ifflags(int fd, const char *dev, int *flags)
+/* Set interface hw adress */
+int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 {
 	struct ifreq ifr;
 
-	memset(&ifr, 0, sizeof(ifr));
-        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
-	if (ioctl(fd, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
+	/* Fill in the structure */
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+	memcpy(&ifr.ifr_hwaddr.sa_data, hwaddr, ETH_ALEN);
+
+	/* call the IOCTL */
+	if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
+		perror("SIOCSIFHWADDR");
 		return -1;
 	}
-	*flags = ifr.ifr_flags & 0xffff;
+
+	/* we're out of here! */
 	return 0;
 }
 
-static int tap_set_ifflags(int fd, const char *dev, int flags)
+/* Set a certain interface flags. */
+static int tap_set_flags(const char *dev, short flags)
 {
 	struct ifreq ifr;
+	int fd;
 
-	memset(&ifr, 0, sizeof(ifr));
-        snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
-	ifr.ifr_flags = flags & 0xffff;
-	if (ioctl(fd, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
+
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+		fprintf(stderr, "%s: ERROR while getting interface flags: %s\n",
+			dev, strerror(errno));
+		return (-1);
+	}
+
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_flags |= flags;
+	if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
 		perror("SIOCSIFFLAGS");
 		return -1;
 	}
-	return 0;
+
+	close(fd);
+	return (0);
 }
 
+/* Clear a certain interface flags. */
+static int tap_clr_flags(const char *dev, short flags)
+{
+	struct ifreq ifr;
+	int fd;
 
-int tun_open(char *dev) { return tun_open_common(dev, 1); }
-int tap_open(char *dev) { return tun_open_common(dev, 0); }
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
 
-int tun_close(int fd, char *dev) { return close(fd); }
-int tap_close(int fd, char *dev) { return close(fd); }
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+		fprintf(stderr, "%s: ERROR while getting interface flags: %s\n",
+			dev, strerror(errno));
+		return -1;
+	}
 
-/* Read/write frames from TUN device */
-int tun_write(int fd, const void *buf, int len) { return write(fd, buf, len); }
-int tap_write(int fd, const void *buf, int len) { return write(fd, buf, len); }
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_flags &= ~flags;
+	if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
+		perror("SIOCSIFFLAGS");
+		return -1;
+	}
 
-int tun_read(int fd, void *buf, int len) { return read(fd, buf, len); }
-int tap_read(int fd, void *buf, int len) { return read(fd, buf, len); }
+	close(fd);
+	return (0);
+}
+
+/* Test if a specified flags is set */
+static int tap_test_flag(const char *dev, short flags)
+{
+	struct ifreq ifr;
+	int fd;
+
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
+
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+		fprintf(stderr, "%s: ERROR while testing interface flags: %s\n",
+			dev, strerror(errno));
+		return -1;
+	}
+
+	close(fd);
+	return (ifr.ifr_flags & flags);
+}
+
+int tap_bring_up(int fd, const char *dev)
+{
+	return tap_set_flags(dev, IFF_UP);
+}
+
+int tap_bring_down(int fd, const char *dev)
+{
+	return tap_clr_flags(dev, IFF_UP);
+}
 

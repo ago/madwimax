@@ -20,19 +20,16 @@
 #ifndef _TUN_DEV_H
 #define _TUN_DEV_H
 
-int tun_open(char *dev);
 int tap_open(char *dev);
-
-int tun_close(int fd, char *dev);
 int tap_close(int fd, char *dev);
+
+int tap_write(int fd, const void *buf, int len);
+int tap_read(int fd, void *buf, int len);
 
 int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr);
 
-int tun_write(int fd, const void *buf, int len);
-int tap_write(int fd, const void *buf, int len);
-
-int tun_read(int fd, void *buf, int len);
-int tap_read(int fd, void *buf, int len);
+int tap_bring_up(int fd, const char *dev);
+int tap_bring_down(int fd, const char *dev);
 
 #endif // _TUN_DEV_H
 
