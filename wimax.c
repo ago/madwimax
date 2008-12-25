@@ -33,7 +33,7 @@
 
 #include "protocol.h"
 #include "wimax.h"
-#include "tun_dev.h"
+#include "tap_dev.h"
 
 #define DEVICE_VID		0x04e9
 #define DEVICE_PID		0x6761
