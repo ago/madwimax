@@ -1,4 +1,4 @@
-# udev rules file for madwimax supported devices (for udev 0.98 version)
+# udev rules file for madwimax supported devices
 SUBSYSTEM!="usb|usb_device", GOTO="madwimax_rules_end"
 ACTION!="add", GOTO="madwimax_rules_end"
 
