@@ -50,7 +50,6 @@ static struct libusb_device_handle *devh = NULL;
 static struct libusb_transfer *req_transfer = NULL;
 
 static unsigned char read_buffer[MAX_PACKET_LEN];
-static int req_in_progress = 0;
 
 static int tap_fd = -1;
 static char tap_dev[20];
@@ -149,7 +148,6 @@ static int set_data(unsigned char* data, int size)
 
 static void cb_req(struct libusb_transfer *transfer)
 {
-	req_in_progress = 0;
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		debug_msg(0, "req transfer status %d\n", transfer->status);
 		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
@@ -254,7 +252,7 @@ static int process_events_once(int timeout)
 	return 0;
 }
 
-/* handle events until timeout is reached or one of the events in event_mask happen */
+/* handle events until timeout is reached or all of the events in event_mask happen */
 static int process_events_by_mask(int timeout, int event_mask)
 {
 	struct timeval start, curr;
@@ -263,7 +261,7 @@ static int process_events_by_mask(int timeout, int event_mask)
 
 	CHECK_NEGATIVE(gettimeofday(&start, NULL));
 
-	while ((wd_status.info_updated & event_mask) == 0 && delay >= 0) {
+	while ((wd_status.info_updated & event_mask) != event_mask && delay >= 0) {
 		long a;
 
 		CHECK_NEGATIVE(process_events_once(delay));
