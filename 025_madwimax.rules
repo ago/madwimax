@@ -1,0 +1,8 @@
+# udev rules file for madwimax supported devices (for udev 0.98 version)
+SUBSYSTEM!="usb|usb_device", GOTO="madwimax_rules_end"
+ACTION!="add", GOTO="madwimax_rules_end"
+
+ATTRS{idVendor}=="04e9", ATTRS{idProduct}=="6761", ATTR{bInterfaceNumber}=="01", RUN+="/bin/sh -c '/bin/echo -n $kernel > /sys/$devpath/driver/unbind'"
+ATTRS{idVendor}=="04e9", ATTRS{idProduct}=="6761", ATTR{bInterfaceNumber}=="00", RUN+="/home/alex/development/wimax/trunk/wimax -qod"
+
+LABEL="madwimax_rules_end"
