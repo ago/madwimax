@@ -156,10 +156,10 @@ static void cb_req(struct libusb_transfer *transfer)
 			debug_msg(0, "device was disconnected, terminating...\n");
 			exit_release_resources(0);
 		}
+	} else {
+		debug_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);
+		process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	}
-
-	debug_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);
-	process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	if (libusb_submit_transfer(req_transfer) < 0) {
 		debug_msg(0, "async read transfer sumbit failed\n");
 	}
@@ -180,87 +180,6 @@ static int alloc_transfers(void)
 int write_netif(const void *buf, int count)
 {
 	return tap_write(tap_fd, buf, count);
-}
-
-static int init(void)
-{
-	unsigned char data2[] = {0x57, 0x50, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	unsigned char data3[] = {0x57, 0x43, 0x12, 0x00, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x04, 0x50, 0x04, 0x00, 0x00};
-	unsigned char req_data[MAX_PACKET_LEN];
-	int len;
-	int r;
-
-	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
-			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
-			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
-
-	CHECK_NEGATIVE(set_data(data2, sizeof(data2)));
-
-	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
-
-	alloc_transfers();
-
-	debug_msg(0, "Continuous async read start...\n");
-	CHECK_NEGATIVE(libusb_submit_transfer(req_transfer));
-
-	req_in_progress = 1;
-	CHECK_NEGATIVE(set_data(data3, sizeof(data3)));
-
-	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	while (req_in_progress) {
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
-	}
-
-	debug_msg(0, "Chip info: %s\n", wd_status.chip);
-	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
-
-	req_in_progress = 1;
-	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	len = fill_mac_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	while (req_in_progress) {
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
-	}
-
-	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
-
-	req_in_progress = 1;
-	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	while (req_in_progress) {
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
-	}
-
-	req_in_progress = 1;
-	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	while (req_in_progress) {
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
-	}
-
-	req_in_progress = 1;
-	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	while (req_in_progress) {
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
-	}
-
-	req_in_progress = 1;
-	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	return 0;
 }
 
 static int read_tap()
@@ -315,19 +234,21 @@ static int process_events_once(int timeout)
 
 	process_libusb = (r == 0 && delay == libusb_delay);
 
-	if (fds[nfds - 1].revents)
+	for (i = 0; i < nfds; ++i)
 	{
-		CHECK_NEGATIVE(read_tap());
-	}
-
-	for (i = 0; i < nfds - 1 && !process_libusb; ++i)
-	{
+		if (fds[i].fd == tap_fd) {
+			if (fds[i].revents)
+			{
+				CHECK_NEGATIVE(read_tap());
+			}
+			continue;
+		}
 		process_libusb |= fds[i].revents;
 	}
 
 	if (process_libusb)
 	{
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
+		CHECK_NEGATIVE(libusb_handle_events(0));
 	}
 
 	return 0;
@@ -353,7 +274,9 @@ static int process_events_by_mask(int timeout, int event_mask)
 		delay = timeout - a;
 	}
 
-	return delay;
+	wd_status.info_updated &= ~event_mask;
+
+	return (delay > 0) ? delay : 0;
 }
 
 int alloc_fds()
@@ -371,7 +294,9 @@ int alloc_fds()
 	{
 		nfds++;
 	}
-	nfds++;
+	if (tap_fd != -1) {
+		nfds++;
+	}
 
 	if(fds != NULL) {
 		free(fds);
@@ -383,9 +308,11 @@ int alloc_fds()
 		fds[i].fd = usb_fds[i]->fd;
 		fds[i].events = usb_fds[i]->events;
 	}
-	fds[nfds - 1].fd = tap_fd;
-	fds[nfds - 1].events = POLLIN;
-	fds[nfds - 1].revents = 0;
+	if (tap_fd != -1) {
+		fds[i].fd = tap_fd;
+		fds[i].events = POLLIN;
+		fds[i].revents = 0;
+	}
 
 	free(usb_fds);
 
@@ -402,6 +329,71 @@ void cb_removed_pollfd(int fd, void *user_data)
 	alloc_fds();
 }
 
+static int init(void)
+{
+	unsigned char data2[] = {0x57, 0x50, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	unsigned char data3[] = {0x57, 0x43, 0x12, 0x00, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x04, 0x50, 0x04, 0x00, 0x00};
+	unsigned char req_data[MAX_PACKET_LEN];
+	int len;
+	int r;
+
+	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
+			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
+			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
+
+	CHECK_NEGATIVE(set_data(data2, sizeof(data2)));
+
+	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
+
+	alloc_transfers();
+
+	debug_msg(0, "Continuous async read start...\n");
+	CHECK_NEGATIVE(libusb_submit_transfer(req_transfer));
+
+	CHECK_NEGATIVE(set_data(data3, sizeof(data3)));
+
+	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
+
+	debug_msg(0, "Chip info: %s\n", wd_status.chip);
+	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
+
+	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	len = fill_mac_req(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	process_events_by_mask(500, WDS_MAC);
+
+	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+
+	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
+
+	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	process_events_by_mask(500, WDS_OTHER);
+
+	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	process_events_by_mask(500, WDS_OTHER);
+
+	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
+	CHECK_NEGATIVE(set_data(req_data, len));
+
+	return 0;
+}
+
 static int flag = 0;
 
 static int scan_loop(void)
@@ -409,9 +401,6 @@ static int scan_loop(void)
 	unsigned char req_data[MAX_PACKET_LEN];
 	int len;
 	int r;
-
-	alloc_fds();
-	libusb_set_pollfd_notifiers(NULL, cb_added_pollfd, cb_removed_pollfd, NULL);
 
 	while (1)
 	{
@@ -593,6 +582,9 @@ int main(int argc, char **argv)
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGQUIT, &sigact, NULL);
 
+	alloc_fds();
+	libusb_set_pollfd_notifiers(NULL, cb_added_pollfd, cb_removed_pollfd, NULL);
+
 	r = init();
 	if (r < 0) {
 		debug_msg(0, "init error %d\n", r);
@@ -605,6 +597,7 @@ int main(int argc, char **argv)
 		exit_release_resources(1);
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
+	cb_added_pollfd(tap_fd, POLLIN, NULL);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
 

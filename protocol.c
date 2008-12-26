@@ -95,6 +95,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 
 static int process_debug_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	dev->info_updated |= WDS_OTHER;
 	return 0;
 }
 
@@ -117,6 +118,8 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 			return -1;
 	}
 
+	dev->info_updated |= WDS_OTHER;
+
 	return 0;
 }
 
@@ -131,12 +134,17 @@ static int process_E_response(struct wimax_dev_status *dev, const unsigned char 
 	if (buf[0x5] == 0x3) {
 		dev->proto_flags = buf[0x7];
 		dev->info_updated |= WDS_PROTO_FLAGS;
+		return 0;
 	}
+
+	dev->info_updated |= WDS_OTHER;
+
 	return 0;
 }
 
 static int process_P_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	dev->info_updated |= WDS_OTHER;
 	return 0;
 }
 
