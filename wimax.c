@@ -151,8 +151,11 @@ static void cb_req(struct libusb_transfer *transfer)
 {
 	req_in_progress = 0;
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		debug_msg(0, "req transfer status %d?\n", transfer->status);
-		return;
+		debug_msg(0, "req transfer status %d\n", transfer->status);
+		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
+			debug_msg(0, "device was disconnected, terminating...\n");
+			exit_release_resources(0);
+		}
 	}
 
 	debug_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);

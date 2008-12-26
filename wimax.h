@@ -33,6 +33,7 @@
 #define WDS_STATE	0x200
 #define WDS_PROTO_FLAGS	0x400
 #define WDS_OTHER	0x800
+#define WDS_ANY		0xfff
 
 struct wimax_dev_status {
 	unsigned int info_updated;
