@@ -1,7 +1,7 @@
 CC := gcc
 CFLAGS := -g -MMD -Wall
 LDFLAGS :=
-SOURCES := $(wildcard *.c)
+SOURCES := protocol.c tap_dev.c wimax.c
 OBJECTS := $(SOURCES:.c=.o)
 LIBS := -lusb-1.0
 EXECUTABLE := wimax
