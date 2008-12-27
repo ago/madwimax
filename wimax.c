@@ -172,14 +172,25 @@ int get_link_status()
 /* set link_status */
 void set_link_status(int link_status)
 {
+	wd_status.info_updated |= WDS_LINK_STATUS;
+
+	if (wd_status.link_status == link_status) return;
+
 	if (wd_status.link_status < 2 && link_status == 2) {
 		tap_bring_up(tap_fd, tap_dev);
 	}
 	if (wd_status.link_status == 2 && link_status < 2) {
 		tap_bring_down(tap_fd, tap_dev);
 	}
+	if (link_status == 1) {
+		unsigned char req_data[MAX_PACKET_LEN];
+		int len;
+
+		len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
+		set_data(req_data, len);
+	}
+
 	wd_status.link_status = link_status;
-	wd_status.info_updated |= WDS_LINK_STATUS;
 }
 
 /* get state */
@@ -281,7 +292,7 @@ static int process_events_once(int timeout)
 
 	if (process_libusb)
 	{
-		CHECK_NEGATIVE(libusb_handle_events(0));
+		CHECK_NEGATIVE(libusb_handle_events(NULL));
 	}
 
 	return 0;
@@ -427,8 +438,6 @@ static int init(void)
 	return 0;
 }
 
-static int flag = 0;
-
 static int scan_loop(void)
 {
 	unsigned char req_data[MAX_PACKET_LEN];
@@ -438,7 +447,6 @@ static int scan_loop(void)
 	while (1)
 	{
 		if (wd_status.link_status == 0) {
-			wd_status.info_updated = 0;
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
 			CHECK_NEGATIVE(set_data(req_data, len));
 
@@ -450,7 +458,6 @@ static int scan_loop(void)
 				debug_msg(0, "Network found.\n");
 			}
 		} else {
-			wd_status.info_updated = 0;
 			//len = fill_connection_params1_req(req_data, MAX_PACKET_LEN);
 			//r = set_data(req_data, len);
 			//if (r < 0) {
@@ -465,7 +472,6 @@ static int scan_loop(void)
 			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d\n", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
 			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
 
-			wd_status.info_updated = 0;
 			len = fill_state_req(req_data, MAX_PACKET_LEN);
 			CHECK_NEGATIVE(set_data(req_data, len));
 
@@ -473,18 +479,7 @@ static int scan_loop(void)
 
 			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
 
-			if (flag == 0 && wd_status.link_status == 1) {
-				flag = 1;
-				wd_status.info_updated = 0;
-				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
-				CHECK_NEGATIVE(set_data(req_data, len));
-			}
-
 			process_events_by_mask(5000, WDS_LINK_STATUS);
-		}
-		if (wd_status.link_status != 1)
-		{
-			flag = 0;
 		}
 	}
 }
