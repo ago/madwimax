@@ -163,6 +163,36 @@ static void cb_req(struct libusb_transfer *transfer)
 	}
 }
 
+/* get link_status */
+int get_link_status()
+{
+	return wd_status.link_status;
+}
+
+/* set link_status */
+void set_link_status(int link_status)
+{
+	wd_status.link_status = link_status;
+	wd_status.info_updated |= WDS_LINK_STATUS;
+}
+
+/* get state */
+int get_state()
+{
+	return wd_status.state;
+}
+
+/* set state */
+void set_state(int state)
+{
+	wd_status.state = state;
+	wd_status.info_updated |= WDS_STATE;
+	if (state >= 1 && state <= 3 && wd_status.link_status != (state - 1)) {
+		wd_status.link_status = state - 1;
+		wd_status.info_updated |= WDS_LINK_STATUS;
+	}
+}
+
 static int alloc_transfers(void)
 {
 	req_transfer = libusb_alloc_transfer(0);
@@ -402,14 +432,14 @@ static int scan_loop(void)
 
 	while (1)
 	{
-		if (wd_status.net_found == 0) {
+		if (wd_status.link_status == 0) {
 			wd_status.info_updated = 0;
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
 			CHECK_NEGATIVE(set_data(req_data, len));
 
-			process_events_by_mask(5000, WDS_NET_FOUND);
+			process_events_by_mask(5000, WDS_LINK_STATUS);
 
-			if (wd_status.net_found == 0) {
+			if (wd_status.link_status == 0) {
 				debug_msg(0, "Network not found.\n");
 			} else {
 				debug_msg(0, "Network found.\n");
@@ -436,18 +466,18 @@ static int scan_loop(void)
 
 			process_events_by_mask(500, WDS_STATE);
 
-			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.net_found);
+			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
 
-			if (flag == 0 && wd_status.net_found == 1) {
+			if (flag == 0 && wd_status.link_status == 1) {
 				flag = 1;
 				wd_status.info_updated = 0;
 				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
 				CHECK_NEGATIVE(set_data(req_data, len));
 			}
 
-			process_events_by_mask(5000, WDS_NET_FOUND);
+			process_events_by_mask(5000, WDS_LINK_STATUS);
 		}
-		if (wd_status.net_found != 1)
+		if (wd_status.link_status != 1)
 		{
 			flag = 0;
 		}

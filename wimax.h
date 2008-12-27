@@ -24,7 +24,7 @@
 #define WDS_CHIP	0x001
 #define WDS_FIRMWARE	0x002
 #define WDS_MAC		0x004
-#define WDS_NET_FOUND	0x008
+#define WDS_LINK_STATUS	0x008
 #define WDS_RSSI	0x010
 #define WDS_CINR	0x020
 #define WDS_BSID	0x040
@@ -41,7 +41,7 @@ struct wimax_dev_status {
 	char chip[0x40];
 	char firmware[0x40];
 	unsigned char mac[6];
-	int net_found;
+	int link_status;
 	short rssi;
 	float cinr;
 	unsigned char bsid[6];
@@ -49,6 +49,14 @@ struct wimax_dev_status {
 	unsigned int freq;
 	int state;
 };
+
+/* get/set link_status */
+int get_link_status();
+void set_link_status(int link_status);
+
+/* get/set state */
+int get_state();
+void set_state(int state);
 
 /* print debug message. */
 void debug_msg(int level, const char *fmt, ...);

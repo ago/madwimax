@@ -52,8 +52,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->net_found = (buf[0x1a] << 8) + buf[0x1b];
-		dev->info_updated |= WDS_NET_FOUND;
+		set_link_status((buf[0x1a] << 8) + buf[0x1b]);
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0x3) {
@@ -61,8 +60,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->net_found = 0;
-		dev->info_updated |= WDS_NET_FOUND;
+		set_link_status(0);
 		return 0;
 	}
 	if (type_a == 0x1 && type_b == 0xa) {
@@ -83,8 +81,7 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 			debug_msg(0, "bad param_len\n");
 			return -1;
 		}
-		dev->state = (buf[0x1a] << 8) + buf[0x1b];
-		dev->info_updated |= WDS_STATE;
+		set_state((buf[0x1a] << 8) + buf[0x1b]);
 		return 0;
 	}
 
