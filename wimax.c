@@ -172,6 +172,12 @@ int get_link_status()
 /* set link_status */
 void set_link_status(int link_status)
 {
+	if (wd_status.link_status < 2 && link_status == 2) {
+		tap_bring_up(tap_fd, tap_dev);
+	}
+	if (wd_status.link_status == 2 && link_status < 2) {
+		tap_bring_down(tap_fd, tap_dev);
+	}
 	wd_status.link_status = link_status;
 	wd_status.info_updated |= WDS_LINK_STATUS;
 }
@@ -188,8 +194,7 @@ void set_state(int state)
 	wd_status.state = state;
 	wd_status.info_updated |= WDS_STATE;
 	if (state >= 1 && state <= 3 && wd_status.link_status != (state - 1)) {
-		wd_status.link_status = state - 1;
-		wd_status.info_updated |= WDS_LINK_STATUS;
+		set_link_status(state - 1);
 	}
 }
 
