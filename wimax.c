@@ -158,7 +158,7 @@ static int set_data(unsigned char* data, int size)
 static void cb_req(struct libusb_transfer *transfer)
 {
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		debug_msg(0, "req transfer status %d\n", transfer->status);
+		debug_msg(0, "async bulk read error %d\n", transfer->status);
 		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
 			device_disconnected = 1;
 			return;
