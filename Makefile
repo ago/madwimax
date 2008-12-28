@@ -3,7 +3,7 @@ CFLAGS := -g -Wall
 LDFLAGS :=
 SOURCES := src/protocol.c src/tap_dev.c src/wimax.c
 OBJECTS := $(SOURCES:.c=.o)
-LIBS := -lusb-1.0
+LIBS := -lusb-1.0 -lpthread
 EXECUTABLE := wimax
 
 all: $(EXECUTABLE)
