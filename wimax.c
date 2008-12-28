@@ -610,6 +610,12 @@ int main(int argc, char **argv)
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGQUIT, &sigact, NULL);
 
+	if (daemonize) {
+		debug_msg(0, "Daemonizing...\n");
+		wimax_debug_level = -1;
+		daemon(0, 0);
+	}
+
 	alloc_fds();
 	libusb_set_pollfd_notifiers(NULL, cb_added_pollfd, cb_removed_pollfd, NULL);
 
@@ -628,12 +634,6 @@ int main(int argc, char **argv)
 	cb_added_pollfd(tap_fd, POLLIN, NULL);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
-
-	if (daemonize) {
-		debug_msg(0, "Daemonizing...\n");
-		wimax_debug_level = -1;
-		daemon(0, 0);
-	}
 
 	r = scan_loop();
 	if (r < 0) {
