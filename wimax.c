@@ -63,6 +63,9 @@ static int diode_on = 1;
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
 
+static int first_nego_flag = 0;
+static int device_disconnected = 0;
+
 char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
 
 static void exit_release_resources(int code);
@@ -183,11 +186,7 @@ void set_link_status(int link_status)
 		tap_bring_down(tap_fd, tap_dev);
 	}
 	if (link_status == 1) {
-		unsigned char req_data[MAX_PACKET_LEN];
-		int len;
-
-		len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
-		set_data(req_data, len);
+		first_nego_flag = 1;
 	}
 
 	wd_status.link_status = link_status;
@@ -478,6 +477,12 @@ static int scan_loop(void)
 			process_events_by_mask(500, WDS_STATE);
 
 			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
+
+			if (first_nego_flag) {
+				first_nego_flag = 0;
+				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
+				CHECK_NEGATIVE(set_data(req_data, len));
+			}
 
 			process_events_by_mask(5000, WDS_LINK_STATUS);
 		}
