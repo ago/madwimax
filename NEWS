@@ -1,2 +1,17 @@
+Version 0.0.2
+  - Fixed reconnection issue. The driver was not able to repair a failed
+    connection at all.
+  - Fixed some rare startup problems. The driver now flushes the garbage
+    from the previous session.
+  - Added command-line options parsing.
+  - Added support for diode control.
+  - Added an option to daemonize the driver.
+  - The driver now brings the TAP interface up when the device connects
+    to the network and down when the connection is lost.
+  - The driver immediately exits when it founds device unplugged so now
+    it can be safely started by udev when device is plugged.
+  - Various minor fixes.
+  - Cleaned up code.
+
 Version 0.0.1
   - Initial networking support.

@@ -123,6 +123,9 @@ static int get_data(unsigned char* data, int size)
 	r = libusb_bulk_transfer(devh, EP_IN, data, size, &transferred, 0);
 	if (r < 0) {
 		debug_msg(0, "bulk read error %d\n", r);
+		if (r == LIBUSB_ERROR_NO_DEVICE) {
+			device_disconnected = 1;
+		}
 		return r;
 	}
 
@@ -140,6 +143,9 @@ static int set_data(unsigned char* data, int size)
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
 		debug_msg(0, "bulk write error %d\n", r);
+		if (r == LIBUSB_ERROR_NO_DEVICE) {
+			device_disconnected = 1;
+		}
 		return r;
 	}
 	if (transferred < size) {
@@ -154,8 +160,8 @@ static void cb_req(struct libusb_transfer *transfer)
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		debug_msg(0, "req transfer status %d\n", transfer->status);
 		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
-			debug_msg(0, "device was disconnected, terminating...\n");
-			exit_release_resources(0);
+			device_disconnected = 1;
+			return;
 		}
 	} else {
 		debug_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);
@@ -306,7 +312,7 @@ static int process_events_by_mask(int timeout, int event_mask)
 
 	CHECK_NEGATIVE(gettimeofday(&start, NULL));
 
-	while ((wd_status.info_updated & event_mask) != event_mask && delay >= 0) {
+	while (!device_disconnected && (wd_status.info_updated & event_mask) != event_mask && delay >= 0) {
 		long a;
 
 		CHECK_NEGATIVE(process_events_once(delay));
@@ -443,7 +449,7 @@ static int scan_loop(void)
 	int len;
 	int r;
 
-	while (1)
+	while (!device_disconnected)
 	{
 		if (wd_status.link_status == 0) {
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
@@ -487,6 +493,8 @@ static int scan_loop(void)
 			process_events_by_mask(5000, WDS_LINK_STATUS);
 		}
 	}
+
+	return 0;
 }
 
 static void usage(char *progname)
@@ -644,6 +652,10 @@ int main(int argc, char **argv)
 	if (r < 0) {
 		debug_msg(0, "scan_loop error %d\n", r);
 		exit_release_resources(1);
+	}
+
+	if (device_disconnected) {
+		debug_msg(0, "device disconnected, terminating...\n", r);
 	}
 
 	exit_release_resources(0);
