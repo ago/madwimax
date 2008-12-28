@@ -1,7 +1,7 @@
 CC := gcc
-CFLAGS := -g -MMD -Wall
+CFLAGS := -g -Wall
 LDFLAGS :=
-SOURCES := protocol.c tap_dev.c wimax.c
+SOURCES := src/protocol.c src/tap_dev.c src/wimax.c
 OBJECTS := $(SOURCES:.c=.o)
 LIBS := -lusb-1.0
 EXECUTABLE := wimax
@@ -17,7 +17,5 @@ $(EXECUTABLE): $(OBJECTS)
 .PHONY: clean all
 
 clean:
-	rm -f $(EXECUTABLE) *.o *.d
-
-include $(wildcard *.d)
+	rm -f $(EXECUTABLE) src/*.o src/*.d
 
