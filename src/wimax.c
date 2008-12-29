@@ -644,6 +644,7 @@ int main(int argc, char **argv)
 		exit_release_resources(1);
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
+	tap_set_mtu(tap_fd, tap_dev, 1300);
 	cb_added_pollfd(tap_fd, POLLIN, NULL);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);

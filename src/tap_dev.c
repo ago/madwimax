@@ -141,6 +141,8 @@ int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 {
 	struct ifreq ifr;
 
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
+
 	/* Fill in the structure */
 	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
@@ -152,7 +154,26 @@ int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 		return -1;
 	}
 
-	/* we're out of here! */
+	return 0;
+}
+
+/* Set interface mtu */
+int tap_set_mtu(int fd, const char *dev, int mtu)
+{
+	struct ifreq ifr;
+
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
+
+	/* Fill in the structure */
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_mtu = mtu;
+
+	/* call the IOCTL */
+	if ((ioctl(fd, SIOCSIFMTU, &ifr)) < 0) {
+		perror("SIOCSIFMTU");
+		return -1;
+	}
+
 	return 0;
 }
 

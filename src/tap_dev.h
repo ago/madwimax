@@ -27,6 +27,7 @@ int tap_write(int fd, const void *buf, int len);
 int tap_read(int fd, void *buf, int len);
 
 int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr);
+int tap_set_mtu(int fd, const char *dev, int mtu);
 
 int tap_bring_up(int fd, const char *dev);
 int tap_bring_down(int fd, const char *dev);
