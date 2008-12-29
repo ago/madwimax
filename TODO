@@ -1,9 +1,8 @@
 Driver:
  * Adopt autotools
  * Add man page and docs
- * Change link status of the TAP interface when connected to/disconnected
-   from the WiMax network
- * Write udev rules for the driver startup/pseudo-DVD blacklisting
+ * Run user-provided scripts when the interface is brought up and down
+   (for dhcp at least)
  * Write to syslog
  * Use dbus(?) to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
