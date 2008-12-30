@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
 #include <errno.h>
 
 #include <sys/ioctl.h>
@@ -130,7 +129,7 @@ int tap_read(int fd, void *buf, int len) { return read(fd, buf, len); }
 
 
 /* Like strncpy but make sure the resulting string is always 0 terminated. */
-static char *safe_strncpy(char *dst, const char *src, size_t size)
+static char *safe_strncpy(char *dst, const char *src, int size)
 {
 	dst[size-1] = '\0';
 	return strncpy(dst,src,size-1);
