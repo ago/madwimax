@@ -1,9 +1,9 @@
 Driver:
- * Adopt autotools
  * Add man page and docs
  * Run user-provided scripts when the interface is brought up and down
    (for dhcp at least)
  * Write to syslog
+ * Pass usbfs device filename from udev
  * Use dbus(?) to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
