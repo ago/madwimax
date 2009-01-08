@@ -335,7 +335,8 @@ static int process_events_once(int timeout)
 
 	if (process_libusb)
 	{
-		CHECK_NEGATIVE(libusb_handle_events(NULL));
+		struct timeval tv = {.tv_sec = 0, .tv_usec = 0};
+		CHECK_NEGATIVE(libusb_handle_events_timeout(NULL, &tv));
 	}
 
 	return 0;
@@ -640,6 +641,7 @@ static void exit_release_resources(int code)
 
 static void exit_close_usb(int code)
 {
+	libusb_unlock_events(NULL);
 	libusb_close(devh);
 	libusb_exit(NULL);
 	exit(code);
