@@ -1,36 +1,39 @@
-dnl +------------------------------------------------------------------+
-dnl | madwimax: configure.in                                           |
-dnl +------------------------------------------------------------------+
+# +------------------------------------------------------------------+
+# | madwimax: configure.in                                           |
+# +------------------------------------------------------------------+
 
-dnl madwimax version number is defined here and *only* here
+# madwimax version number is defined here and *only* here
 AC_INIT(madwimax, 0.0.2, [http://code.google.com/p/madwimax/issues/list])
 echo "MadWimax version ${PACKAGE_VERSION}"
 AC_CANONICAL_SYSTEM
+AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 
-dnl Use "./configure --enable-maintainer-mode" to keep Makefile.in and Makefile
-dnl in sync after SVN updates.
+# Use "./configure --enable-maintainer-mode" to keep Makefile.in and Makefile
+# in sync after SVN updates.
 AM_MAINTAINER_MODE
 
+# Checks for programs.
 AC_PROG_CC
 
-AC_CHECK_FUNCS([gettimeofday])
-AC_CHECK_FUNCS([memset])
-AC_CHECK_FUNCS([socket])
-AC_CHECK_FUNCS([strerror])
-AC_CHECK_HEADERS([fcntl.h])
-AC_CHECK_HEADERS([string.h])
-AC_CHECK_HEADERS([sys/ioctl.h])
-AC_CHECK_HEADERS([sys/socket.h])
-AC_CHECK_HEADERS([sys/time.h])
-AC_C_CONST
-AC_FUNC_VPRINTF
+# Checks for header files.
 AC_HEADER_STDC
-AC_HEADER_TIME
-AC_PROG_GCC_TRADITIONAL
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
 
-dnl Check for libusb-1.0
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_HEADER_TIME
+
+# Checks for library functions.
+AC_FUNC_FORK
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_VPRINTF
+AC_FUNC_WAIT3
+AC_CHECK_FUNCS([gettimeofday memset socket strerror])
+
+# Check for libusb-1.0
 PKG_CHECK_MODULES([libusb1], libusb-1.0,,exit)
 CFLAGS="$CFLAGS $libusb1_CFLAGS"
 LDFLAGS="$LDFLAGS $libusb1_LIBS"

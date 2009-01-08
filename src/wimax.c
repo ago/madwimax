@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 #include <libusb-1.0/libusb.h>
 
@@ -626,6 +627,7 @@ static void exit_release_resources(int code)
 	}
 	if(tap_fd >= 0) {
 		if_down();
+		while (wait(NULL) > 0) {}
 		tap_close(tap_fd, tap_dev);
 	}
 	libusb_set_pollfd_notifiers(NULL, NULL, NULL, NULL);
@@ -649,7 +651,7 @@ static void sighandler_exit(int signum) {
 
 static void sighandler_wait_child(int signum) {
 	int status;
-	wait(&status);
+	wait3(&status, WNOHANG, NULL);
 	debug_msg(0, "Child exited with status %d\n", status);
 }
 
