@@ -1,9 +1,9 @@
 Driver:
  * Add man page and docs
- * Run user-provided scripts when the interface is brought up and down
-   (for dhcp at least)
- * Write to syslog
+ * Write to syslog or/and some separate debug log
  * Pass usbfs device filename from udev
+ * Have a table of supported VID:PID combinations and match devices
+   against it
  * Use dbus(?) to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
