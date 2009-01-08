@@ -153,6 +153,7 @@ int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 		return -1;
 	}
 
+	close(fd);
 	return 0;
 }
 
@@ -173,6 +174,7 @@ int tap_set_mtu(int fd, const char *dev, int mtu)
 		return -1;
 	}
 
+	close(fd);
 	return 0;
 }
 

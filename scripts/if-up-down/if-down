@@ -1,0 +1,2 @@
+#!/bin/sh
+/sbin/dhclient3 -r -pf /var/run/dhclient."$1".pid -lf /var/lib/dhcp3/dhclient."$1".leases "$1" >/dev/null 2>/dev/null

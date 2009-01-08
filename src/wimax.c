@@ -19,6 +19,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <poll.h>
 #include <signal.h>
@@ -178,6 +179,42 @@ int get_link_status()
 	return wd_status.link_status;
 }
 
+/* run specified script */
+static int run_program(char *prog)
+{
+	int pid = fork();
+
+	if(pid < 0) { /* error */
+		return -1;
+	} else if (pid > 0) { /* parent */
+		return pid;
+	} else { /* child */
+		char *args[3] = {prog, tap_dev, NULL};
+		char *env[1] = {NULL};
+		/* run the program */
+		execve(prog, args, env);
+		return -1;
+	}
+}
+
+/* brings interface up and runs a user-supplied script */
+static int if_up()
+{
+	tap_bring_up(tap_fd, tap_dev);
+	debug_msg(0, "Starting if-up script...\n");
+	run_program("scripts/if-up-down/if-up");
+	return 0;
+}
+
+/* brings interface down and runs a user-supplied script */
+static int if_down()
+{
+	debug_msg(0, "Starting if-down script...\n");
+	run_program("scripts/if-up-down/if-down");
+	tap_bring_down(tap_fd, tap_dev);
+	return 0;
+}
+
 /* set link_status */
 void set_link_status(int link_status)
 {
@@ -186,10 +223,10 @@ void set_link_status(int link_status)
 	if (wd_status.link_status == link_status) return;
 
 	if (wd_status.link_status < 2 && link_status == 2) {
-		tap_bring_up(tap_fd, tap_dev);
+		if_up();
 	}
 	if (wd_status.link_status == 2 && link_status < 2) {
-		tap_bring_down(tap_fd, tap_dev);
+		if_down();
 	}
 	if (link_status == 1) {
 		first_nego_flag = 1;
@@ -328,6 +365,25 @@ static int process_events_by_mask(int timeout, int event_mask)
 	return (delay > 0) ? delay : 0;
 }
 
+/* set close-on-exec flag on the file descriptor */
+int set_coe(int fd)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFD);
+	if (flags == -1)
+	{
+		debug_msg(0, "failed to set close-on-exec flag on fd %d\n", fd);
+		return -1;
+	}
+	flags |= FD_CLOEXEC;
+	if (fcntl(fd, F_SETFD, flags) == -1)
+	{
+		debug_msg(0, "failed to set close-on-exec flag on fd %d\n", fd);
+		return -1;
+	}
+}
+
 int alloc_fds()
 {
 	int i;
@@ -368,12 +424,12 @@ int alloc_fds()
 	return 0;
 }
 
-void cb_added_pollfd(int fd, short events, void *user_data)
+void cb_add_pollfd(int fd, short events, void *user_data)
 {
 	alloc_fds();
 }
 
-void cb_removed_pollfd(int fd, void *user_data)
+void cb_remove_pollfd(int fd, void *user_data)
 {
 	alloc_fds();
 }
@@ -569,6 +625,7 @@ static void exit_release_resources(int code)
 		libusb_free_transfer(req_transfer);
 	}
 	if(tap_fd >= 0) {
+		if_down();
 		tap_close(tap_fd, tap_dev);
 	}
 	libusb_set_pollfd_notifiers(NULL, NULL, NULL, NULL);
@@ -586,8 +643,14 @@ static void exit_close_usb(int code)
 	exit(code);
 }
 
-static void sighandler(int signum) {
+static void sighandler_exit(int signum) {
 	exit_release_resources(0);
+}
+
+static void sighandler_wait_child(int signum) {
+	int status;
+	wait(&status);
+	debug_msg(0, "Child exited with status %d\n", status);
 }
 
 int main(int argc, char **argv)
@@ -616,12 +679,14 @@ int main(int argc, char **argv)
 	}
 	debug_msg(0, "claimed interface\n");
 
-	sigact.sa_handler = sighandler;
+	sigact.sa_handler = sighandler_exit;
 	sigemptyset(&sigact.sa_mask);
 	sigact.sa_flags = 0;
 	sigaction(SIGINT, &sigact, NULL);
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGQUIT, &sigact, NULL);
+	sigact.sa_handler = sighandler_wait_child;
+	sigaction(SIGCHLD, &sigact, NULL);
 
 	if (daemonize) {
 		debug_msg(0, "Daemonizing...\n");
@@ -630,7 +695,7 @@ int main(int argc, char **argv)
 	}
 
 	alloc_fds();
-	libusb_set_pollfd_notifiers(NULL, cb_added_pollfd, cb_removed_pollfd, NULL);
+	libusb_set_pollfd_notifiers(NULL, cb_add_pollfd, cb_remove_pollfd, NULL);
 
 	r = init();
 	if (r < 0) {
@@ -645,7 +710,8 @@ int main(int argc, char **argv)
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
 	tap_set_mtu(tap_fd, tap_dev, 1300);
-	cb_added_pollfd(tap_fd, POLLIN, NULL);
+	set_coe(tap_fd);
+	cb_add_pollfd(tap_fd, POLLIN, NULL);
 
 	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
 
