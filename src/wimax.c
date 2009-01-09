@@ -47,7 +47,7 @@
 
 #define CHECK_NEGATIVE(x) {if((r = (x)) < 0) return r;}
 
-
+static struct libusb_context *ctx = NULL;
 static struct libusb_device_handle *devh = NULL;
 static struct libusb_transfer *req_transfer = NULL;
 
@@ -74,7 +74,7 @@ static void exit_release_resources(int code);
 
 static int find_wimax_device(void)
 {
-	devh = libusb_open_device_with_vid_pid(NULL, DEVICE_VID, DEVICE_PID);
+	devh = libusb_open_device_with_vid_pid(ctx, DEVICE_VID, DEVICE_PID);
 	return devh ? 0 : -EIO;
 }
 
@@ -305,10 +305,10 @@ static int process_events_once(int timeout)
 	int i;
 	char process_libusb = 0;
 
-	r = libusb_get_next_timeout(NULL, &tv);
+	r = libusb_get_next_timeout(ctx, &tv);
 	if (r == 1 && tv.tv_sec == 0 && tv.tv_usec == 0)
 	{
-		r = libusb_handle_events(NULL);
+		r = libusb_handle_events_timeout(ctx, &tv);
 	}
 
 	delay = libusb_delay = tv.tv_sec * 1000 + tv.tv_usec;
@@ -336,7 +336,7 @@ static int process_events_once(int timeout)
 	if (process_libusb)
 	{
 		struct timeval tv = {.tv_sec = 0, .tv_usec = 0};
-		CHECK_NEGATIVE(libusb_handle_events_timeout(NULL, &tv));
+		CHECK_NEGATIVE(libusb_handle_events_timeout(ctx, &tv));
 	}
 
 	return 0;
@@ -389,7 +389,7 @@ int set_coe(int fd)
 int alloc_fds()
 {
 	int i;
-	const struct libusb_pollfd **usb_fds = libusb_get_pollfds(NULL);
+	const struct libusb_pollfd **usb_fds = libusb_get_pollfds(ctx);
 
 	if (!usb_fds)
 	{
@@ -414,6 +414,7 @@ int alloc_fds()
 	{
 		fds[i].fd = usb_fds[i]->fd;
 		fds[i].events = usb_fds[i]->events;
+		set_coe(usb_fds[i]->fd);
 	}
 	if (tap_fd != -1) {
 		fds[i].fd = tap_fd;
@@ -631,7 +632,7 @@ static void exit_release_resources(int code)
 		while (wait(NULL) > 0) {}
 		tap_close(tap_fd, tap_dev);
 	}
-	libusb_set_pollfd_notifiers(NULL, NULL, NULL, NULL);
+	libusb_set_pollfd_notifiers(ctx, NULL, NULL, NULL);
 	if(fds != NULL) {
 		free(fds);
 	}
@@ -641,9 +642,9 @@ static void exit_release_resources(int code)
 
 static void exit_close_usb(int code)
 {
-	libusb_unlock_events(NULL);
+	libusb_unlock_events(ctx);
 	libusb_close(devh);
-	libusb_exit(NULL);
+	libusb_exit(ctx);
 	exit(code);
 }
 
@@ -664,7 +665,7 @@ int main(int argc, char **argv)
 
 	parse_args(argc, argv);
 
-	r = libusb_init(NULL);
+	r = libusb_init(&ctx);
 	if (r < 0) {
 		debug_msg(0, "failed to initialise libusb\n");
 		exit(1);
@@ -699,7 +700,7 @@ int main(int argc, char **argv)
 	}
 
 	alloc_fds();
-	libusb_set_pollfd_notifiers(NULL, cb_add_pollfd, cb_remove_pollfd, NULL);
+	libusb_set_pollfd_notifiers(ctx, cb_add_pollfd, cb_remove_pollfd, NULL);
 
 	r = init();
 	if (r < 0) {
