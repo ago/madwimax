@@ -40,6 +40,9 @@
 #define DEVICE_VID		0x04e9
 #define DEVICE_PID		0x6761
 
+#define IF_MODEM		0
+#define IF_DVD			1
+
 #define EP_IN			(2 | LIBUSB_ENDPOINT_IN)
 #define EP_OUT			(4 | LIBUSB_ENDPOINT_OUT)
 
@@ -61,6 +64,7 @@ static struct wimax_dev_status wd_status;
 static int wimax_debug_level = 0;
 static int daemonize = 0;
 static int diode_on = 1;
+static int detach_dvd = 0;
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
@@ -560,11 +564,12 @@ static void usage(char *progname)
 {
 	printf("Usage: %s [options]\n", progname);
 	printf("Options:\n");
-	printf("  -v, --verbose    increase the debugging level\n");
-	printf("  -q, --quiet      don't print on the console\n");
-	printf("  -d, --daemonize  daemonize after startup\n");
-	printf("  -o, --diode-off  turn off the diode (on by default)\n");
-	printf("  -h, --help       display this help\n");
+	printf("  -v, --verbose     increase the debugging level\n");
+	printf("  -q, --quiet       don't print on the console\n");
+	printf("  -d, --daemonize   daemonize after startup\n");
+	printf("  -o, --diode-off   turn off the diode (diode is on by default)\n");
+	printf("  -f, --detach-dvd  detach pseudo-DVD kernel driver on startup\n");
+	printf("  -h, --help        display this help\n");
 }
 
 static void parse_args(int argc, char **argv)
@@ -580,11 +585,12 @@ static void parse_args(int argc, char **argv)
 			{"quiet",	no_argument,		0, 'q'},
 			{"daemonize",	no_argument,		0, 'd'},
 			{"diode-off",	no_argument,		0, 'o'},
+			{"detach-dvd",	no_argument,		0, 'f'},
 			{"help",	no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "vqdoh", long_options, &option_index);
+		c = getopt_long(argc, argv, "vqdofh", long_options, &option_index);
 
 		/* detect the end of the options. */
 		if (c == -1)
@@ -603,6 +609,9 @@ static void parse_args(int argc, char **argv)
 				break;
 			case 'o':
 				diode_on = 0;
+				break;
+			case 'f':
+				detach_dvd = 1;
 				break;
 			case 'h':
 				usage(argv[0]);
@@ -677,9 +686,18 @@ int main(int argc, char **argv)
 		exit_close_usb(1);
 	}
 
-	r = libusb_claim_interface(devh, 0);
+	if (detach_dvd && libusb_kernel_driver_active(devh, IF_DVD) == 1) {
+		r = libusb_detach_kernel_driver(devh, IF_DVD);
+		if (r < 0) {
+			debug_msg(0, "kernel driver detach error %d\n", r);
+		} else {
+			debug_msg(0, "detached pseudo-DVD kernel driver\n");
+		}
+	}
+
+	r = libusb_claim_interface(devh, IF_MODEM);
 	if (r < 0) {
-		debug_msg(0, "usb_claim_interface error %d\n", r);
+		debug_msg(0, "claim usb interface error %d\n", r);
 		exit_close_usb(1);
 	}
 	debug_msg(0, "claimed interface\n");
