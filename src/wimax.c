@@ -75,12 +75,55 @@ static int device_disconnected = 0;
 
 char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
 
+typedef struct usb_device_id_t {
+	int vendorID;
+	int productID;
+} usb_device_id_t;
+
+/* list of all known devices */
+static usb_device_id_t wimax_dev_ids[] = {
+	{ 0x04e8, 0x6761 },
+	{ 0x04e9, 0x6761 },
+};
+
 static void exit_release_resources(int code);
 
-static int find_wimax_device(void)
+static struct libusb_device_handle* find_wimax_device(void)
 {
-	devh = libusb_open_device_with_vid_pid(ctx, DEVICE_VID, DEVICE_PID);
-	return devh ? 0 : -EIO;
+	struct libusb_device **devs;
+	struct libusb_device *found = NULL;
+	struct libusb_device *dev;
+	struct libusb_device_handle *handle = NULL;
+	size_t i = 0;
+	int r;
+
+	if (libusb_get_device_list(ctx, &devs) < 0)
+		return NULL;
+
+	while (!found && (dev = devs[i++]) != NULL) {
+		struct libusb_device_descriptor desc;
+		size_t j = 0;
+
+		r = libusb_get_device_descriptor(dev, &desc);
+		if (r < 0) {
+			continue;
+		}
+		for (j = 0; j < sizeof(wimax_dev_ids); j++) {
+			if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
+				found = dev;
+				break;
+			}
+		}
+	}
+
+	if (found) {
+		r = libusb_open(found, &handle);
+		if (r < 0)
+			handle = NULL;
+	}
+
+	libusb_free_device_list(devs, 1);
+	return handle;
 }
 
 /* print debug message. */
@@ -685,8 +728,8 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	r = find_wimax_device();
-	if (r < 0) {
+	devh = find_wimax_device();
+	if (devh == NULL) {
 		debug_msg(0, "Could not find/open device\n");
 		exit_close_usb(1);
 	}
