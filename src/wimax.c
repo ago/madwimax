@@ -49,6 +49,7 @@
 #define MAX_PACKET_LEN		0x4000
 
 #define CHECK_NEGATIVE(x) {if((r = (x)) < 0) return r;}
+#define CHECK_DISCONNECTED(x) {if((r = (x)) == LIBUSB_ERROR_NO_DEVICE) exit_release_resources(0);}
 
 static struct libusb_context *ctx = NULL;
 static struct libusb_device_handle *devh = NULL;
@@ -130,7 +131,7 @@ static int get_data(unsigned char* data, int size)
 	if (r < 0) {
 		debug_msg(0, "bulk read error %d\n", r);
 		if (r == LIBUSB_ERROR_NO_DEVICE) {
-			device_disconnected = 1;
+			exit_release_resources(0);
 		}
 		return r;
 	}
@@ -150,7 +151,7 @@ static int set_data(unsigned char* data, int size)
 	if (r < 0) {
 		debug_msg(0, "bulk write error %d\n", r);
 		if (r == LIBUSB_ERROR_NO_DEVICE) {
-			device_disconnected = 1;
+			exit_release_resources(0);
 		}
 		return r;
 	}
@@ -355,10 +356,14 @@ static int process_events_by_mask(int timeout, int event_mask)
 
 	CHECK_NEGATIVE(gettimeofday(&start, NULL));
 
-	while (!device_disconnected && (wd_status.info_updated & event_mask) != event_mask && delay >= 0) {
+	while ((event_mask == 0 || (wd_status.info_updated & event_mask) != event_mask) && delay >= 0) {
 		long a;
 
 		CHECK_NEGATIVE(process_events_once(delay));
+
+		if (device_disconnected) {
+			exit_release_resources(0);
+		}
 
 		CHECK_NEGATIVE(gettimeofday(&curr, NULL));
 
@@ -449,26 +454,26 @@ static int init(void)
 	int len;
 	int r;
 
-	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
-			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
-			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
-	CHECK_NEGATIVE(set_data(req_data, len));
-
-	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
-
-	CHECK_NEGATIVE(set_data(data2, sizeof(data2)));
-
-	CHECK_NEGATIVE(get_data(read_buffer, sizeof(read_buffer)));
-
 	alloc_transfers();
 
 	debug_msg(0, "Continuous async read start...\n");
-	CHECK_NEGATIVE(libusb_submit_transfer(req_transfer));
+	CHECK_DISCONNECTED(libusb_submit_transfer(req_transfer));
 
-	CHECK_NEGATIVE(set_data(data3, sizeof(data3)));
+	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
+			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
+			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
+	set_data(req_data, len);
+
+	process_events_by_mask(500, WDS_PROTO_FLAGS);
+
+	set_data(data2, sizeof(data2));
+
+	process_events_by_mask(500, WDS_OTHER);
+
+	set_data(data3, sizeof(data3));
 
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
 
@@ -476,32 +481,32 @@ static int init(void)
 	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
 
 	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	len = fill_mac_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_MAC);
 
 	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
 
 	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_OTHER);
 
 	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_OTHER);
 
 	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
-	CHECK_NEGATIVE(set_data(req_data, len));
+	set_data(req_data, len);
 
 	return 0;
 }
@@ -512,11 +517,11 @@ static int scan_loop(void)
 	int len;
 	int r;
 
-	while (!device_disconnected)
+	while (1)
 	{
 		if (wd_status.link_status == 0) {
 			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
-			CHECK_NEGATIVE(set_data(req_data, len));
+			set_data(req_data, len);
 
 			process_events_by_mask(5000, WDS_LINK_STATUS);
 
@@ -533,7 +538,7 @@ static int scan_loop(void)
 			//}
 
 			len = fill_connection_params2_req(req_data, MAX_PACKET_LEN);
-			CHECK_NEGATIVE(set_data(req_data, len));
+			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
 
@@ -541,7 +546,7 @@ static int scan_loop(void)
 			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
 
 			len = fill_state_req(req_data, MAX_PACKET_LEN);
-			CHECK_NEGATIVE(set_data(req_data, len));
+			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_STATE);
 
@@ -550,7 +555,7 @@ static int scan_loop(void)
 			if (first_nego_flag) {
 				first_nego_flag = 0;
 				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
-				CHECK_NEGATIVE(set_data(req_data, len));
+				set_data(req_data, len);
 			}
 
 			process_events_by_mask(5000, WDS_LINK_STATUS);
@@ -742,10 +747,6 @@ int main(int argc, char **argv)
 	if (r < 0) {
 		debug_msg(0, "scan_loop error %d\n", r);
 		exit_release_resources(1);
-	}
-
-	if (device_disconnected) {
-		debug_msg(0, "device disconnected, terminating...\n", r);
 	}
 
 	exit_release_resources(0);
