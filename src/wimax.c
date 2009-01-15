@@ -783,7 +783,7 @@ int main(int argc, char **argv)
 		exit_release_resources(1);
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
-	tap_set_mtu(tap_fd, tap_dev, 1300);
+	tap_set_mtu(tap_fd, tap_dev, 1400);
 	set_coe(tap_fd);
 	cb_add_pollfd(tap_fd, POLLIN, NULL);
 
