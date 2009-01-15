@@ -777,6 +777,9 @@ int main(int argc, char **argv)
 	tap_fd = tap_open(tap_dev);
 	if (tap_fd < 0) {
 		debug_msg(0, "failed to allocate tap interface\n");
+		debug_msg(0,
+				"You should have TUN/TAP driver compiled in the kernel or as a kernel module.\n"
+				"If 'modprobe tun' doesn't help then recompile your kernel.\n");
 		exit_release_resources(1);
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
