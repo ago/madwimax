@@ -33,6 +33,7 @@
 
 #include <libusb-1.0/libusb.h>
 
+#include <config.h>
 #include "protocol.h"
 #include "wimax.h"
 #include "tap_dev.h"
@@ -658,6 +659,7 @@ static void usage(char *progname)
 	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
 	printf("      --device vid:pid        specify the USB device by VID:PID\n");
 	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
+	printf("  -V, --version               print the version number\n");
 	printf("  -h, --help                  display this help\n");
 }
 
@@ -677,11 +679,12 @@ static void parse_args(int argc, char **argv)
 			{"detach-dvd",		no_argument,		0, 'f'},
 			{"device",		required_argument,	0, 1},
 			{"exact-device",	required_argument,	0, 2},
+			{"version",		no_argument,		0, 'V'},
 			{"help",		no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "vqdofh", long_options, &option_index);
+		c = getopt_long(argc, argv, "vqdofVh", long_options, &option_index);
 
 		/* detect the end of the options. */
 		if (c == -1)
@@ -709,49 +712,58 @@ static void parse_args(int argc, char **argv)
 					detach_dvd = 1;
 					break;
 				}
+			case 'V': {
+					printf("%s\n", PACKAGE_STRING);
+					exit(0);
+					break;
+				}
 			case 'h': {
 					usage(argv[0]);
 					exit(0);
 					break;
 				}
 			case 1: {
-					unsigned long int vid, pid;
 					char *delim = strchr(optarg, ':');
-					char *c1, *c2;
 
-					if (delim == NULL) goto error_vp;
-					*delim = 0;
+					if (delim != NULL) {
+						unsigned long int vid, pid;
+						char *c1, *c2;
 
-					vid = strtoul(optarg, &c1, 16);
-					pid = strtoul(delim + 1, &c2, 16);
-					if (!*c1 && !*c2 && vid < 0x10000 && pid < 0x10000) {
-						match_method = MATCH_BY_VID_PID;
-						match_params.vid = vid;
-						match_params.pid = pid;
-						break;
+						*delim = 0;
+
+						vid = strtoul(optarg, &c1, 16);
+						pid = strtoul(delim + 1, &c2, 16);
+						if (!*c1 && !*c2 && vid < 0x10000 && pid < 0x10000) {
+							match_method = MATCH_BY_VID_PID;
+							match_params.vid = vid;
+							match_params.pid = pid;
+							break;
+						}
 					}
-				error_vp:
+
 					printf("Error parsing VID:PID combination.\n");
 					exit(1);
 					break;
 				}
 			case 2: {
-					unsigned long int bus, dev;
 					char *delim = strchr(optarg, '/');
-					char *c1, *c2;
 
-					if (delim == NULL) goto error_bd;
-					*delim = 0;
+					if (delim != NULL) {
+						unsigned long int bus, dev;
+						char *c1, *c2;
 
-					bus = strtoul(optarg, &c1, 10);
-					dev = strtoul(delim + 1, &c2, 10);
-					if (!*c1 && !*c2) {
-						match_method = MATCH_BY_BUS_DEV;
-						match_params.bus = bus;
-						match_params.dev = dev;
-						break;
+						*delim = 0;
+
+						bus = strtoul(optarg, &c1, 10);
+						dev = strtoul(delim + 1, &c2, 10);
+						if (!*c1 && !*c2) {
+							match_method = MATCH_BY_BUS_DEV;
+							match_params.bus = bus;
+							match_params.dev = dev;
+							break;
+						}
 					}
-				error_bd:
+
 					printf("Error parsing BUS/DEV combination.\n");
 					exit(1);
 					break;
