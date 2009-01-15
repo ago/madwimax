@@ -1,9 +1,6 @@
 Driver:
  * Add man page and docs
  * Write to syslog or/and some separate debug log
- * Pass usbfs device filename from udev
- * Have a table of supported VID:PID combinations and match devices
-   against it
  * Use dbus(?) to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:

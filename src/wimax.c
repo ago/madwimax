@@ -37,44 +37,20 @@
 #include "wimax.h"
 #include "tap_dev.h"
 
-#define DEVICE_VID		0x04e9
-#define DEVICE_PID		0x6761
 
-#define IF_MODEM		0
-#define IF_DVD			1
-
-#define EP_IN			(2 | LIBUSB_ENDPOINT_IN)
-#define EP_OUT			(4 | LIBUSB_ENDPOINT_OUT)
-
-#define MAX_PACKET_LEN		0x4000
-
-#define CHECK_NEGATIVE(x) {if((r = (x)) < 0) return r;}
-#define CHECK_DISCONNECTED(x) {if((r = (x)) == LIBUSB_ERROR_NO_DEVICE) exit_release_resources(0);}
-
-static struct libusb_context *ctx = NULL;
-static struct libusb_device_handle *devh = NULL;
-static struct libusb_transfer *req_transfer = NULL;
-
-static unsigned char read_buffer[MAX_PACKET_LEN];
-
-static int tap_fd = -1;
-static char tap_dev[20];
-
-static struct wimax_dev_status wd_status;
-
+/* variables for the command-line parameters */
 static int wimax_debug_level = 0;
 static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
 
-static nfds_t nfds;
-static struct pollfd* fds = NULL;
+#define MATCH_BY_LIST		0
+#define MATCH_BY_VID_PID	1
+#define MATCH_BY_BUS_DEV	2
 
-static int first_nego_flag = 0;
-static int device_disconnected = 0;
+static int match_method = MATCH_BY_LIST;
 
-char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
-
+/* for matching by list... */
 typedef struct usb_device_id_t {
 	int vendorID;
 	int productID;
@@ -85,6 +61,52 @@ static usb_device_id_t wimax_dev_ids[] = {
 	{ 0x04e8, 0x6761 },
 	{ 0x04e9, 0x6761 },
 };
+
+/* for other methods of matching... */
+static union {
+	struct {
+		unsigned int vid;
+		unsigned int pid;
+	};
+	struct {
+		unsigned int bus;
+		unsigned int dev;
+	};
+} match_params;
+
+/* USB-related parameters */
+#define IF_MODEM		0
+#define IF_DVD			1
+
+#define EP_IN			(2 | LIBUSB_ENDPOINT_IN)
+#define EP_OUT			(4 | LIBUSB_ENDPOINT_OUT)
+
+#define MAX_PACKET_LEN		0x4000
+
+/* information collector */
+static struct wimax_dev_status wd_status;
+
+char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO", "FBSS", "RESET", "RESERVED", "UNDEFINED", "BE", "NRTPS", "RTPS", "ERTPS", "UGS", "INITIAL_RNG", "BASIC", "PRIMARY", "SECONDARY", "MULTICAST", "NORMAL_MULTICAST", "SLEEP_MULTICAST", "IDLE_MULTICAST", "FRAG_BROADCAST", "BROADCAST", "MANAGEMENT", "TRANSPORT"};
+
+/* libusb stuff */
+static struct libusb_context *ctx = NULL;
+static struct libusb_device_handle *devh = NULL;
+static struct libusb_transfer *req_transfer = NULL;
+
+static unsigned char read_buffer[MAX_PACKET_LEN];
+
+static int tap_fd = -1;
+static char tap_dev[20];
+
+static nfds_t nfds;
+static struct pollfd* fds = NULL;
+
+static int first_nego_flag = 0;
+static int device_disconnected = 0;
+
+
+#define CHECK_NEGATIVE(x) {if((r = (x)) < 0) return r;}
+#define CHECK_DISCONNECTED(x) {if((r = (x)) == LIBUSB_ERROR_NO_DEVICE) exit_release_resources(0);}
 
 static void exit_release_resources(int code);
 
@@ -108,9 +130,26 @@ static struct libusb_device_handle* find_wimax_device(void)
 		if (r < 0) {
 			continue;
 		}
-		for (j = 0; j < sizeof(wimax_dev_ids); j++) {
-			if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
-				found = dev;
+		switch (match_method) {
+			case MATCH_BY_LIST: {
+				for (j = 0; j < sizeof(wimax_dev_ids); j++) {
+					if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
+						found = dev;
+						break;
+					}
+				}
+				break;
+			}
+			case MATCH_BY_VID_PID: {
+				if (desc.idVendor == match_params.vid && desc.idProduct == match_params.pid) {
+					found = dev;
+				}
+				break;
+			}
+			case MATCH_BY_BUS_DEV: {
+				if (libusb_get_bus_number(dev) == match_params.bus && libusb_get_device_address(dev) == match_params.dev) {
+					found = dev;
+				}
 				break;
 			}
 		}
@@ -612,12 +651,14 @@ static void usage(char *progname)
 {
 	printf("Usage: %s [options]\n", progname);
 	printf("Options:\n");
-	printf("  -v, --verbose     increase the debugging level\n");
-	printf("  -q, --quiet       don't print on the console\n");
-	printf("  -d, --daemonize   daemonize after startup\n");
-	printf("  -o, --diode-off   turn off the diode (diode is on by default)\n");
-	printf("  -f, --detach-dvd  detach pseudo-DVD kernel driver on startup\n");
-	printf("  -h, --help        display this help\n");
+	printf("  -v, --verbose               increase the debugging level\n");
+	printf("  -q, --quiet                 don't print on the console\n");
+	printf("  -d, --daemonize             daemonize after startup\n");
+	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
+	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
+	printf("      --device vid:pid        specify the USB device by VID:PID\n");
+	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
+	printf("  -h, --help                  display this help\n");
 }
 
 static void parse_args(int argc, char **argv)
@@ -629,12 +670,14 @@ static void parse_args(int argc, char **argv)
 		int option_index = 0;
 		static struct option long_options[] =
 		{
-			{"verbose",	no_argument,		0, 'v'},
-			{"quiet",	no_argument,		0, 'q'},
-			{"daemonize",	no_argument,		0, 'd'},
-			{"diode-off",	no_argument,		0, 'o'},
-			{"detach-dvd",	no_argument,		0, 'f'},
-			{"help",	no_argument,		0, 'h'},
+			{"verbose",		no_argument,		0, 'v'},
+			{"quiet",		no_argument,		0, 'q'},
+			{"daemonize",		no_argument,		0, 'd'},
+			{"diode-off",		no_argument,		0, 'o'},
+			{"detach-dvd",		no_argument,		0, 'f'},
+			{"device",		required_argument,	0, 1},
+			{"exact-device",	required_argument,	0, 2},
+			{"help",		no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
 
@@ -646,32 +689,82 @@ static void parse_args(int argc, char **argv)
 
 		switch (c)
 		{
-			case 'v':
-				wimax_debug_level++;
-				break;
-			case 'q':
-				wimax_debug_level = -1;
-				break;
-			case 'd':
-				daemonize = 1;
-				break;
-			case 'o':
-				diode_on = 0;
-				break;
-			case 'f':
-				detach_dvd = 1;
-				break;
-			case 'h':
-				usage(argv[0]);
-				exit(0);
-				break;
-			case '?':
-				/* getopt_long already printed an error message. */
-				usage(argv[0]);
-				exit(1);
-				break;
-			default:
-				exit(1);
+			case 'v': {
+					wimax_debug_level++;
+					break;
+				}
+			case 'q': {
+					wimax_debug_level = -1;
+					break;
+				}
+			case 'd': {
+					daemonize = 1;
+					break;
+				}
+			case 'o': {
+					diode_on = 0;
+					break;
+				}
+			case 'f': {
+					detach_dvd = 1;
+					break;
+				}
+			case 'h': {
+					usage(argv[0]);
+					exit(0);
+					break;
+				}
+			case 1: {
+					unsigned long int vid, pid;
+					char *delim = strchr(optarg, ':');
+					char *c1, *c2;
+
+					if (delim == NULL) goto error_vp;
+					*delim = 0;
+
+					vid = strtoul(optarg, &c1, 16);
+					pid = strtoul(delim + 1, &c2, 16);
+					if (!*c1 && !*c2 && vid < 0x10000 && pid < 0x10000) {
+						match_method = MATCH_BY_VID_PID;
+						match_params.vid = vid;
+						match_params.pid = pid;
+						break;
+					}
+				error_vp:
+					printf("Error parsing VID:PID combination.\n");
+					exit(1);
+					break;
+				}
+			case 2: {
+					unsigned long int bus, dev;
+					char *delim = strchr(optarg, '/');
+					char *c1, *c2;
+
+					if (delim == NULL) goto error_bd;
+					*delim = 0;
+
+					bus = strtoul(optarg, &c1, 10);
+					dev = strtoul(delim + 1, &c2, 10);
+					if (!*c1 && !*c2) {
+						match_method = MATCH_BY_BUS_DEV;
+						match_params.bus = bus;
+						match_params.dev = dev;
+						break;
+					}
+				error_bd:
+					printf("Error parsing BUS/DEV combination.\n");
+					exit(1);
+					break;
+				}
+			case '?': {
+					/* getopt_long already printed an error message. */
+					usage(argv[0]);
+					exit(1);
+					break;
+				}
+			default: {
+					exit(1);
+				}
 		}
 	}
 }
