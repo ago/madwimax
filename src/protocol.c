@@ -20,6 +20,7 @@
 
 #include <string.h>
 
+#include "logging.h"
 #include "protocol.h"
 
 static int process_normal_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)

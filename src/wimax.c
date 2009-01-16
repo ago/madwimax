@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -25,6 +24,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 
@@ -113,7 +113,7 @@ static struct libusb_device_handle* find_wimax_device(void)
 	struct libusb_device *found = NULL;
 	struct libusb_device *dev;
 	struct libusb_device_handle *handle = NULL;
-	size_t i = 0;
+	int i = 0;
 	int r;
 
 	if (libusb_get_device_list(ctx, &devs) < 0)
@@ -121,7 +121,7 @@ static struct libusb_device_handle* find_wimax_device(void)
 
 	while (!found && (dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
-		size_t j = 0;
+		unsigned int j = 0;
 
 		r = libusb_get_device_descriptor(dev, &desc);
 		if (r < 0) {
@@ -160,24 +160,6 @@ static struct libusb_device_handle* find_wimax_device(void)
 
 	libusb_free_device_list(devs, 1);
 	return handle;
-}
-
-static int get_data(unsigned char* data, int size)
-{
-	int r;
-	int transferred;
-
-	r = libusb_bulk_transfer(devh, EP_IN, data, size, &transferred, 0);
-	if (r < 0) {
-		debug_msg(0, "bulk read error %d\n", r);
-		if (r == LIBUSB_ERROR_NO_DEVICE) {
-			exit_release_resources(0);
-		}
-		return r;
-	}
-
-	debug_dumphexasc(1, "Bulk read:", data, transferred);
-	return r;
 }
 
 static int set_data(unsigned char* data, int size)
@@ -347,7 +329,7 @@ static int process_events_once(int timeout)
 	int r;
 	int libusb_delay;
 	int delay;
-	int i;
+	unsigned int i;
 	char process_libusb = 0;
 
 	r = libusb_get_next_timeout(ctx, &tv);
@@ -388,7 +370,7 @@ static int process_events_once(int timeout)
 }
 
 /* handle events until timeout is reached or all of the events in event_mask happen */
-static int process_events_by_mask(int timeout, int event_mask)
+static int process_events_by_mask(int timeout, unsigned int event_mask)
 {
 	struct timeval start, curr;
 	int r;
@@ -433,6 +415,8 @@ int set_coe(int fd)
 		debug_msg(0, "failed to set close-on-exec flag on fd %d\n", fd);
 		return -1;
 	}
+
+	return 0;
 }
 
 int alloc_fds()
@@ -555,7 +539,6 @@ static int scan_loop(void)
 {
 	unsigned char req_data[MAX_PACKET_LEN];
 	int len;
-	int r;
 
 	while (1)
 	{

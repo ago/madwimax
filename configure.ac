@@ -6,16 +6,30 @@
 AC_INIT(madwimax, 0.0.2, [http://code.google.com/p/madwimax/issues/list])
 echo "MadWimax version ${PACKAGE_VERSION}"
 AC_CANONICAL_SYSTEM
-AC_CONFIG_SRCDIR([include/config.h.in])
+AC_CONFIG_SRCDIR([src/wimax.c])
 AC_CONFIG_HEADERS([include/config.h])
+AC_PREFIX_DEFAULT(/usr/local/madwimax)
 AM_INIT_AUTOMAKE([-Wall -Werror])
 
 # Use "./configure --enable-maintainer-mode" to keep Makefile.in and Makefile
 # in sync after SVN updates.
 AM_MAINTAINER_MODE
 
+# Fix this early so we can expand with eval later
+test "${prefix}" = "NONE" && prefix="${ac_default_prefix}"
+test "${exec_prefix}" = "NONE" && exec_prefix='${prefix}'
+
+# Set defaults
+udevdir='/etc/udev'
+if test ! -d "${udevdir}"; then
+   udevdir=''
+fi
+
+PIDPATH="/var/run"
+
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_INSTALL
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -31,16 +45,67 @@ AC_FUNC_FORK
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_VPRINTF
 AC_FUNC_WAIT3
-AC_CHECK_FUNCS([gettimeofday memset socket strerror])
+AC_CHECK_FUNCS([gettimeofday memset socket strchr strerror strtoul])
 
 # Check for libusb-1.0
 PKG_CHECK_MODULES([libusb1], libusb-1.0,,exit)
 CFLAGS="$CFLAGS $libusb1_CFLAGS"
 LDFLAGS="$LDFLAGS $libusb1_LIBS"
 
+# Only use these when compiling with gcc 
+if ( test "${GCC}" = "yes" )
+then
+	CFLAGS="${CFLAGS} -Wall -Wsign-compare"
+fi  
+
+AC_MSG_CHECKING(whether to install udev rules)
+AC_ARG_WITH(udev-dir,
+	AC_HELP_STRING([--with-udev-dir=PATH], [where to install udev rules (/etc/udev)]),
+	[
+		case "${withval}" in
+			yes)
+				if test -z "${udevdir}"; then
+					AC_MSG_RESULT(no)
+					AC_MSG_ERROR(["udev directory requested but not found"])
+				fi
+			;;
+			auto)
+			;;
+			no)
+				udevdir=""
+			;;
+			*)
+				udevdir="${withval}"
+			;;
+		esac
+	])
+if test -n "${udevdir}"; then
+	AC_MSG_RESULT(using ${udevdir})
+else
+	AC_MSG_RESULT(no)
+fi
+AM_CONDITIONAL(WITH_UDEV, test -n "${udevdir}")
+
+# expand ${sbindir} and write it out
+conftemp="${sbindir}"
+eval conftemp=\"${conftemp}\"
+eval conftemp=\"${conftemp}\"
+
+SBINDIR=${conftemp}
+AC_DEFINE_UNQUOTED(SBINDIR, "${conftemp}",
+			[Default sbin path])
+
+
+AC_SUBST(SBINDIR)
+AC_SUBST(udevdir)
+
 AC_CONFIG_FILES([
 	Makefile
 	include/Makefile
 	src/Makefile
+	scripts/if-up-down/Makefile
+	scripts/udev/Makefile
+	scripts/udev/z60_madwimax.rules
+	scripts/Makefile
 ])
 AC_OUTPUT
