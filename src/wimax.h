@@ -58,12 +58,6 @@ void set_link_status(int link_status);
 int get_state();
 void set_state(int state);
 
-/* print debug message. */
-void debug_msg(int level, const char *fmt, ...);
-
-/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void debug_dumphexasc(int level, const char *msg, const void *buf, int len);
-
 /* write packet to the network interface */
 int write_netif(const void *buf, int count);
 

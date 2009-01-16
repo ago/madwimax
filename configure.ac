@@ -6,8 +6,8 @@
 AC_INIT(madwimax, 0.0.2, [http://code.google.com/p/madwimax/issues/list])
 echo "MadWimax version ${PACKAGE_VERSION}"
 AC_CANONICAL_SYSTEM
-AC_CONFIG_SRCDIR([config.h.in])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_SRCDIR([include/config.h.in])
+AC_CONFIG_HEADERS([include/config.h])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 
 # Use "./configure --enable-maintainer-mode" to keep Makefile.in and Makefile
@@ -40,6 +40,7 @@ LDFLAGS="$LDFLAGS $libusb1_LIBS"
 
 AC_CONFIG_FILES([
 	Makefile
+	include/Makefile
 	src/Makefile
 ])
 AC_OUTPUT

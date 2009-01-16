@@ -24,23 +24,19 @@
 #include <poll.h>
 #include <signal.h>
 #include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 
 #include <libusb-1.0/libusb.h>
 
-#include <config.h>
+#include "logging.h"
 #include "protocol.h"
 #include "wimax.h"
 #include "tap_dev.h"
 
 
 /* variables for the command-line parameters */
-static int wimax_debug_level = 0;
 static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
@@ -164,45 +160,6 @@ static struct libusb_device_handle* find_wimax_device(void)
 
 	libusb_free_device_list(devs, 1);
 	return handle;
-}
-
-/* print debug message. */
-void debug_msg(int level, const char *fmt, ...)
-{
-	va_list va;
-
-	if (level > wimax_debug_level) return;
-
-	va_start(va, fmt);
-	vprintf(fmt, va);
-	va_end(va);
-}
-
-/* If a character is not printable, return a dot. */
-#define toprint(x) (isprint((unsigned int)x) ? (x) : '.')
-
-/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void debug_dumphexasc(int level, const char *msg, const void *buf, int len)
-{
-	int i;
-
-	if (level > wimax_debug_level) return;
-
-	printf("%s\n", msg);
-	for (i = 0; i < len; i+=16) {
-		int j;
-		char hex[49];
-		char ascii[17];
-		memset(hex, ' ', 48);
-		for(j = i; j < i + 16 && j < len; j++) {
-			sprintf(hex + ((j - i) * 3), " %02x", ((unsigned char*)buf)[j]);
-			ascii[j - i] = toprint(((unsigned char*)buf)[j]);
-		}
-		hex[(j - i) * 3] = ' ';
-		hex[48] = 0;
-		ascii[j - i] = 0;
-		printf("  %08x:%s    %s\n", i, hex, ascii);
-	}
 }
 
 static int get_data(unsigned char* data, int size)
@@ -648,21 +605,6 @@ static int scan_loop(void)
 	return 0;
 }
 
-static void usage(char *progname)
-{
-	printf("Usage: %s [options]\n", progname);
-	printf("Options:\n");
-	printf("  -v, --verbose               increase the debugging level\n");
-	printf("  -q, --quiet                 don't print on the console\n");
-	printf("  -d, --daemonize             daemonize after startup\n");
-	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
-	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
-	printf("      --device vid:pid        specify the USB device by VID:PID\n");
-	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
-	printf("  -V, --version               print the version number\n");
-	printf("  -h, --help                  display this help\n");
-}
-
 static void parse_args(int argc, char **argv)
 {
 	while (1)
@@ -693,11 +635,11 @@ static void parse_args(int argc, char **argv)
 		switch (c)
 		{
 			case 'v': {
-					wimax_debug_level++;
+					inc_debug_level();
 					break;
 				}
 			case 'q': {
-					wimax_debug_level = -1;
+					set_debug_level(-1);
 					break;
 				}
 			case 'd': {
@@ -713,7 +655,7 @@ static void parse_args(int argc, char **argv)
 					break;
 				}
 			case 'V': {
-					printf("%s\n", PACKAGE_STRING);
+					version();
 					exit(0);
 					break;
 				}
@@ -741,7 +683,7 @@ static void parse_args(int argc, char **argv)
 						}
 					}
 
-					printf("Error parsing VID:PID combination.\n");
+					debug_msg(0, "Error parsing VID:PID combination.\n");
 					exit(1);
 					break;
 				}
@@ -764,7 +706,7 @@ static void parse_args(int argc, char **argv)
 						}
 					}
 
-					printf("Error parsing BUS/DEV combination.\n");
+					debug_msg(0, "Error parsing BUS/DEV combination.\n");
 					exit(1);
 					break;
 				}
@@ -866,7 +808,7 @@ int main(int argc, char **argv)
 
 	if (daemonize) {
 		debug_msg(0, "Daemonizing...\n");
-		wimax_debug_level = -1;
+		set_debug_level(-1);
 		daemon(0, 0);
 	}
 
