@@ -95,15 +95,27 @@ SBINDIR=${conftemp}
 AC_DEFINE_UNQUOTED(SBINDIR, "${conftemp}",
 			[Default sbin path])
 
+# expand ${sysconfdir} and write it out
+conftemp="${sysconfdir}"
+eval conftemp=\"${conftemp}\"
+eval conftemp=\"${conftemp}\"
+
+SYSCONFDIR=${conftemp}
+AC_DEFINE_UNQUOTED(SYSCONFDIR, "${conftemp}",
+			[Default sysconf path])
+
 
 AC_SUBST(SBINDIR)
+AC_SUBST(SYSCONFDIR)
 AC_SUBST(udevdir)
+
 
 AC_CONFIG_FILES([
 	Makefile
 	include/Makefile
 	src/Makefile
-	scripts/if-up-down/Makefile
+	scripts/events/Makefile
+	scripts/events/event.sh
 	scripts/udev/Makefile
 	scripts/udev/z60_madwimax.rules
 	scripts/Makefile

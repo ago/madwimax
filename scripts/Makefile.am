@@ -1,1 +1,1 @@
-SUBDIRS = if-up-down udev
+SUBDIRS = events udev

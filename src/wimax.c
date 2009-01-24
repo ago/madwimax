@@ -30,6 +30,7 @@
 
 #include <libusb-1.0/libusb.h>
 
+#include "config.h"
 #include "logging.h"
 #include "protocol.h"
 #include "wimax.h"
@@ -208,7 +209,7 @@ int get_link_status()
 }
 
 /* run specified script */
-static int run_program(char *prog)
+static int raise_event(char *event)
 {
 	int pid = fork();
 
@@ -217,10 +218,10 @@ static int run_program(char *prog)
 	} else if (pid > 0) { /* parent */
 		return pid;
 	} else { /* child */
-		char *args[3] = {prog, tap_dev, NULL};
+		char *args[] = {SYSCONFDIR "/event.sh", event, tap_dev, NULL};
 		char *env[1] = {NULL};
 		/* run the program */
-		execve(prog, args, env);
+		execve(args[0], args, env);
 		return -1;
 	}
 }
@@ -230,7 +231,7 @@ static int if_up()
 {
 	tap_bring_up(tap_fd, tap_dev);
 	debug_msg(0, "Starting if-up script...\n");
-	run_program("scripts/if-up-down/if-up");
+	raise_event("if-up");
 	return 0;
 }
 
@@ -238,7 +239,7 @@ static int if_up()
 static int if_down()
 {
 	debug_msg(0, "Starting if-down script...\n");
-	run_program("scripts/if-up-down/if-down");
+	raise_event("if-down");
 	tap_bring_down(tap_fd, tap_dev);
 	return 0;
 }
