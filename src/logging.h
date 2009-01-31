@@ -23,17 +23,17 @@
 /* get printable madwimax version */
 const char* get_madwimax_version();
 
-/* set debug level to the desired value */
-void set_debug_level(int level);
+/* set wmlog level to the desired value */
+void set_wmlog_level(int level);
 
-/* increase debug level by 1 */
-void inc_debug_level();
+/* increase wmlog level by 1 */
+void inc_wmlog_level();
 
-/* print debug message. */
-void debug_msg(int level, const char *fmt, ...);
+/* print wmlog message. */
+void wmlog_msg(int level, const char *fmt, ...);
 
 /* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void debug_dumphexasc(int level, const char *msg, const void *buf, int len);
+void wmlog_dumphexasc(int level, const char *msg, const void *buf, int len);
 
 /* print usage information */
 void usage(const char *prog);

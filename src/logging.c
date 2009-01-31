@@ -36,26 +36,26 @@ const char* get_madwimax_version()
 	return MADWIMAX_VERSION_MACRO;
 }
 
-static int wimax_debug_level = 0;
+static int wimax_log_level = 0;
 
-/* set debug level to the desired value */
-void set_debug_level(int level)
+/* set wmlog level to the desired value */
+void set_wmlog_level(int level)
 {
-	wimax_debug_level = level;
+	wimax_log_level = level;
 }
 
-/* increase debug level by 1 */
-void inc_debug_level()
+/* increase wmlog level by 1 */
+void inc_wmlog_level()
 {
-	wimax_debug_level++;
+	wimax_log_level++;
 }
 
-/* print debug message. */
-void debug_msg(int level, const char *fmt, ...)
+/* print wmlog message. */
+void wmlog_msg(int level, const char *fmt, ...)
 {
 	va_list va;
 
-	if (level > wimax_debug_level) return;
+	if (level > wimax_log_level) return;
 
 	va_start(va, fmt);
 	vprintf(fmt, va);
@@ -67,11 +67,11 @@ void debug_msg(int level, const char *fmt, ...)
 #define toprint(x) (isprint((unsigned int)x) ? (x) : '.')
 
 /* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void debug_dumphexasc(int level, const char *msg, const void *buf, int len)
+void wmlog_dumphexasc(int level, const char *msg, const void *buf, int len)
 {
 	int i;
 
-	if (level > wimax_debug_level) return;
+	if (level > wimax_log_level) return;
 
 	printf("%s\n", msg);
 	for (i = 0; i < len; i+=16) {
@@ -94,8 +94,8 @@ void usage(char *progname)
 {
 	printf("Usage: %s [options]\n", progname);
 	printf("Options:\n");
-	printf("  -v, --verbose               increase the debugging level\n");
-	printf("  -q, --quiet                 don't print on the console\n");
+	printf("  -v, --verbose               increase the log level\n");
+	printf("  -q, --quiet                 switch off logging\n");
 	printf("  -d, --daemonize             daemonize after startup\n");
 	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
 	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
