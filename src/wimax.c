@@ -23,6 +23,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -172,14 +173,14 @@ static int set_data(unsigned char* data, int size)
 
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
-		debug_msg(0, "bulk write error %d\n", r);
+		debug_msg(0, "bulk write error %d", r);
 		if (r == LIBUSB_ERROR_NO_DEVICE) {
 			exit_release_resources(0);
 		}
 		return r;
 	}
 	if (transferred < size) {
-		debug_msg(0, "short write (%d)\n", r);
+		debug_msg(0, "short write (%d)", r);
 		return -1;
 	}
 	return r;
@@ -188,7 +189,7 @@ static int set_data(unsigned char* data, int size)
 static void cb_req(struct libusb_transfer *transfer)
 {
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		debug_msg(0, "async bulk read error %d\n", transfer->status);
+		debug_msg(0, "async bulk read error %d", transfer->status);
 		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
 			device_disconnected = 1;
 			return;
@@ -198,7 +199,7 @@ static void cb_req(struct libusb_transfer *transfer)
 		process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	}
 	if (libusb_submit_transfer(req_transfer) < 0) {
-		debug_msg(0, "async read transfer sumbit failed\n");
+		debug_msg(0, "async read transfer sumbit failed");
 	}
 }
 
@@ -230,7 +231,7 @@ static int raise_event(char *event)
 static int if_up()
 {
 	tap_bring_up(tap_fd, tap_dev);
-	debug_msg(0, "Starting if-up script...\n");
+	debug_msg(0, "Starting if-up script...");
 	raise_event("if-up");
 	return 0;
 }
@@ -238,7 +239,7 @@ static int if_up()
 /* brings interface down and runs a user-supplied script */
 static int if_down()
 {
-	debug_msg(0, "Starting if-down script...\n");
+	debug_msg(0, "Starting if-down script...");
 	raise_event("if-down");
 	tap_bring_down(tap_fd, tap_dev);
 	return 0;
@@ -308,7 +309,7 @@ static int read_tap()
 
 	if (r < 0)
 	{
-		debug_msg(0, "Error while reading from TAP interface\n");
+		debug_msg(0, "Error while reading from TAP interface");
 		return r;
 	}
 
@@ -407,13 +408,13 @@ int set_coe(int fd)
 	flags = fcntl(fd, F_GETFD);
 	if (flags == -1)
 	{
-		debug_msg(0, "failed to set close-on-exec flag on fd %d\n", fd);
+		debug_msg(0, "failed to set close-on-exec flag on fd %d", fd);
 		return -1;
 	}
 	flags |= FD_CLOEXEC;
 	if (fcntl(fd, F_SETFD, flags) == -1)
 	{
-		debug_msg(0, "failed to set close-on-exec flag on fd %d\n", fd);
+		debug_msg(0, "failed to set close-on-exec flag on fd %d", fd);
 		return -1;
 	}
 
@@ -481,7 +482,7 @@ static int init(void)
 
 	alloc_transfers();
 
-	debug_msg(0, "Continuous async read start...\n");
+	debug_msg(0, "Continuous async read start...");
 	CHECK_DISCONNECTED(libusb_submit_transfer(req_transfer));
 
 	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
@@ -502,8 +503,8 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
 
-	debug_msg(0, "Chip info: %s\n", wd_status.chip);
-	debug_msg(0, "Firmware info: %s\n", wd_status.firmware);
+	debug_msg(0, "Chip info: %s", wd_status.chip);
+	debug_msg(0, "Firmware info: %s", wd_status.firmware);
 
 	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
 	set_data(req_data, len);
@@ -513,7 +514,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_MAC);
 
-	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+	debug_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
 	set_data(req_data, len);
@@ -550,9 +551,9 @@ static int scan_loop(void)
 			process_events_by_mask(5000, WDS_LINK_STATUS);
 
 			if (wd_status.link_status == 0) {
-				debug_msg(0, "Network not found.\n");
+				debug_msg(0, "Network not found.");
 			} else {
-				debug_msg(0, "Network found.\n");
+				debug_msg(0, "Network found.");
 			}
 		} else {
 			//len = fill_connection_params1_req(req_data, MAX_PACKET_LEN);
@@ -566,15 +567,15 @@ static int scan_loop(void)
 
 			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
 
-			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d\n", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
-			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x\n", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
+			debug_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
+			debug_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
 
 			len = fill_state_req(req_data, MAX_PACKET_LEN);
 			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_STATE);
 
-			debug_msg(0, "State: %s   Number: %d   Response: %d\n", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
+			debug_msg(0, "State: %s   Number: %d   Response: %d", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
 
 			if (first_nego_flag) {
 				first_nego_flag = 0;
@@ -667,7 +668,7 @@ static void parse_args(int argc, char **argv)
 						}
 					}
 
-					debug_msg(0, "Error parsing VID:PID combination.\n");
+					fprintf(stderr, "Error parsing VID:PID combination.\n");
 					exit(1);
 					break;
 				}
@@ -690,7 +691,7 @@ static void parse_args(int argc, char **argv)
 						}
 					}
 
-					debug_msg(0, "Error parsing BUS/DEV combination.\n");
+					fprintf(stderr, "Error parsing BUS/DEV combination.\n");
 					exit(1);
 					break;
 				}
@@ -743,7 +744,7 @@ static void sighandler_exit(int signum) {
 static void sighandler_wait_child(int signum) {
 	int status;
 	wait3(&status, WNOHANG, NULL);
-	debug_msg(0, "Child exited with status %d\n", status);
+	debug_msg(0, "Child exited with status %d", status);
 }
 
 int main(int argc, char **argv)
@@ -755,31 +756,31 @@ int main(int argc, char **argv)
 
 	r = libusb_init(&ctx);
 	if (r < 0) {
-		debug_msg(0, "failed to initialise libusb\n");
+		debug_msg(0, "failed to initialise libusb");
 		exit(1);
 	}
 
 	devh = find_wimax_device();
 	if (devh == NULL) {
-		debug_msg(0, "Could not find/open device\n");
+		debug_msg(0, "Could not find/open device");
 		exit_close_usb(1);
 	}
 
 	if (detach_dvd && libusb_kernel_driver_active(devh, IF_DVD) == 1) {
 		r = libusb_detach_kernel_driver(devh, IF_DVD);
 		if (r < 0) {
-			debug_msg(0, "kernel driver detach error %d\n", r);
+			debug_msg(0, "kernel driver detach error %d", r);
 		} else {
-			debug_msg(0, "detached pseudo-DVD kernel driver\n");
+			debug_msg(0, "detached pseudo-DVD kernel driver");
 		}
 	}
 
 	r = libusb_claim_interface(devh, IF_MODEM);
 	if (r < 0) {
-		debug_msg(0, "claim usb interface error %d\n", r);
+		debug_msg(0, "claim usb interface error %d", r);
 		exit_close_usb(1);
 	}
-	debug_msg(0, "claimed interface\n");
+	debug_msg(0, "claimed interface");
 
 	sigact.sa_handler = sighandler_exit;
 	sigemptyset(&sigact.sa_mask);
@@ -791,7 +792,7 @@ int main(int argc, char **argv)
 	sigaction(SIGCHLD, &sigact, NULL);
 
 	if (daemonize) {
-		debug_msg(0, "Daemonizing...\n");
+		debug_msg(0, "Daemonizing...");
 		set_debug_level(-1);
 		daemon(0, 0);
 	}
@@ -801,16 +802,16 @@ int main(int argc, char **argv)
 
 	r = init();
 	if (r < 0) {
-		debug_msg(0, "init error %d\n", r);
+		debug_msg(0, "init error %d", r);
 		exit_release_resources(1);
 	}
 
 	tap_fd = tap_open(tap_dev);
 	if (tap_fd < 0) {
-		debug_msg(0, "failed to allocate tap interface\n");
+		debug_msg(0, "failed to allocate tap interface");
 		debug_msg(0,
 				"You should have TUN/TAP driver compiled in the kernel or as a kernel module.\n"
-				"If 'modprobe tun' doesn't help then recompile your kernel.\n");
+				"If 'modprobe tun' doesn't help then recompile your kernel.");
 		exit_release_resources(1);
 	}
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
@@ -818,11 +819,11 @@ int main(int argc, char **argv)
 	set_coe(tap_fd);
 	cb_add_pollfd(tap_fd, POLLIN, NULL);
 
-	debug_msg(0, "Allocated tap interface: %s\n", tap_dev);
+	debug_msg(0, "Allocated tap interface: %s", tap_dev);
 
 	r = scan_loop();
 	if (r < 0) {
-		debug_msg(0, "scan_loop error %d\n", r);
+		debug_msg(0, "scan_loop error %d", r);
 		exit_release_resources(1);
 	}
 

@@ -60,6 +60,7 @@ void debug_msg(int level, const char *fmt, ...)
 	va_start(va, fmt);
 	vprintf(fmt, va);
 	va_end(va);
+	printf("\n");
 }
 
 /* If a character is not printable, return a dot. */
