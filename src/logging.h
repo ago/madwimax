@@ -29,11 +29,16 @@ void set_wmlog_level(int level);
 /* increase wmlog level by 1 */
 void inc_wmlog_level();
 
+/* set logger */
+#define WMLOGGER_STDERR	0
+#define WMLOGGER_SYSLOG	1
+void set_wmlogger(const char *progname, int logger);
+
 /* print wmlog message. */
 void wmlog_msg(int level, const char *fmt, ...);
 
-/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void wmlog_dumphexasc(int level, const char *msg, const void *buf, int len);
+/* dump message and len bytes from buf in hexadecimal and ASCII. */
+void wmlog_dumphexasc(int level, const void *buf, int len, const char *fmt, ...);
 
 /* print usage information */
 void usage(const char *prog);

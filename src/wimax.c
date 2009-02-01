@@ -169,7 +169,7 @@ static int set_data(unsigned char* data, int size)
 	int r;
 	int transferred;
 
-	wmlog_dumphexasc(1, "Bulk write:", data, size);
+	wmlog_dumphexasc(1, data, size, "Bulk write:");
 
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
@@ -195,7 +195,7 @@ static void cb_req(struct libusb_transfer *transfer)
 			return;
 		}
 	} else {
-		wmlog_dumphexasc(1, "Async read:", transfer->buffer, transfer->actual_length);
+		wmlog_dumphexasc(1, transfer->buffer, transfer->actual_length, "Async read:");
 		process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	}
 	if (libusb_submit_transfer(req_transfer) < 0) {
@@ -319,7 +319,7 @@ static int read_tap()
 	}
 
 	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
-	wmlog_dumphexasc(1, "Outgoing packet:", buf, len);
+	wmlog_dumphexasc(1, buf, len, "Outgoing packet:");
 	r = set_data(buf, len);
 
 	return r;
@@ -754,6 +754,14 @@ int main(int argc, char **argv)
 
 	parse_args(argc, argv);
 
+	if (daemonize) {
+		wmlog_msg(0, "Daemonizing, redirecting log to syslog...");
+		set_wmlogger(argv[0], WMLOGGER_SYSLOG);
+		daemon(0, 0);
+	} else {
+		set_wmlogger(argv[0], WMLOGGER_STDERR);
+	}
+
 	r = libusb_init(&ctx);
 	if (r < 0) {
 		wmlog_msg(0, "failed to initialise libusb");
@@ -790,12 +798,6 @@ int main(int argc, char **argv)
 	sigaction(SIGQUIT, &sigact, NULL);
 	sigact.sa_handler = sighandler_wait_child;
 	sigaction(SIGCHLD, &sigact, NULL);
-
-	if (daemonize) {
-		wmlog_msg(0, "Daemonizing...");
-		set_wmlog_level(-1);
-		daemon(0, 0);
-	}
 
 	alloc_fds();
 	libusb_set_pollfd_notifiers(ctx, cb_add_pollfd, cb_remove_pollfd, NULL);

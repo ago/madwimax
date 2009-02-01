@@ -21,8 +21,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 
 #include "config.h"
+#include "logging.h"
 
 /* the reason we define MADWIMAX_VERSION as a static string, rather than a
 	macro, is to make dependency tracking easier (only logging.o depends
@@ -50,6 +52,35 @@ void inc_wmlog_level()
 	wimax_log_level++;
 }
 
+/* log to stderr */
+static void wmlog_stderr(const char *fmt, va_list va)
+{
+	vfprintf(stderr, fmt, va);
+	fprintf(stderr, "\n");
+}
+
+/* log to syslog */
+static void wmlog_syslog(const char *fmt, va_list va)
+{
+	vsyslog(LOG_INFO, fmt, va);
+}
+
+typedef void (*wmlogger_func)(const char *fmt, va_list va);
+
+static wmlogger_func loggers[2] = {[WMLOGGER_STDERR] = wmlog_stderr, [WMLOGGER_SYSLOG] = wmlog_syslog};
+static wmlogger_func selected_logger = wmlog_stderr;
+
+/* set logger to stderr or syslog */
+void set_wmlogger(const char *progname, int logger)
+{
+	selected_logger = loggers[logger];
+	if (logger == WMLOGGER_SYSLOG) {
+		openlog(progname, LOG_PID, LOG_DAEMON);
+	} else {
+		closelog();
+	}
+}
+
 /* print wmlog message. */
 void wmlog_msg(int level, const char *fmt, ...)
 {
@@ -58,22 +89,35 @@ void wmlog_msg(int level, const char *fmt, ...)
 	if (level > wimax_log_level) return;
 
 	va_start(va, fmt);
-	vprintf(fmt, va);
+	selected_logger(fmt, va);
 	va_end(va);
-	printf("\n");
+}
+
+/* print wmlog message. */
+static inline void wmlog_msg_priv(const char *fmt, ...)
+{
+	va_list va;
+
+	va_start(va, fmt);
+	selected_logger(fmt, va);
+	va_end(va);
 }
 
 /* If a character is not printable, return a dot. */
 #define toprint(x) (isprint((unsigned int)x) ? (x) : '.')
 
-/* dump message msg and len bytes from buf in hexadecimal and ASCII. */
-void wmlog_dumphexasc(int level, const char *msg, const void *buf, int len)
+/* dump message and len bytes from buf in hexadecimal and ASCII. */
+void wmlog_dumphexasc(int level, const void *buf, int len, const char *fmt, ...)
 {
 	int i;
+	va_list va;
 
 	if (level > wimax_log_level) return;
 
-	printf("%s\n", msg);
+	va_start(va, fmt);
+	selected_logger(fmt, va);
+	va_end(va);
+
 	for (i = 0; i < len; i+=16) {
 		int j;
 		char hex[49];
@@ -86,11 +130,11 @@ void wmlog_dumphexasc(int level, const char *msg, const void *buf, int len)
 		hex[(j - i) * 3] = ' ';
 		hex[48] = 0;
 		ascii[j - i] = 0;
-		printf("  %08x:%s    %s\n", i, hex, ascii);
+		wmlog_msg_priv("  %08x:%s    %s", i, hex, ascii);
 	}
 }
 
-void usage(char *progname)
+void usage(const char *progname)
 {
 	printf("Usage: %s [options]\n", progname);
 	printf("Options:\n");
