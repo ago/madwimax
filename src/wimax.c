@@ -171,18 +171,18 @@ static int set_data(unsigned char* data, int size)
 	int r;
 	int transferred;
 
-	wmlog_dumphexasc(1, data, size, "Bulk write:");
+	wmlog_dumphexasc(3, data, size, "Bulk write:");
 
 	r = libusb_bulk_transfer(devh, EP_OUT, data, size, &transferred, 0);
 	if (r < 0) {
-		wmlog_msg(0, "bulk write error %d", r);
+		wmlog_msg(1, "bulk write error %d", r);
 		if (r == LIBUSB_ERROR_NO_DEVICE) {
 			exit_release_resources(0);
 		}
 		return r;
 	}
 	if (transferred < size) {
-		wmlog_msg(0, "short write (%d)", r);
+		wmlog_msg(1, "short write (%d)", r);
 		return -1;
 	}
 	return r;
@@ -191,17 +191,17 @@ static int set_data(unsigned char* data, int size)
 static void cb_req(struct libusb_transfer *transfer)
 {
 	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		wmlog_msg(0, "async bulk read error %d", transfer->status);
+		wmlog_msg(1, "async bulk read error %d", transfer->status);
 		if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
 			device_disconnected = 1;
 			return;
 		}
 	} else {
-		wmlog_dumphexasc(1, transfer->buffer, transfer->actual_length, "Async read:");
+		wmlog_dumphexasc(3, transfer->buffer, transfer->actual_length, "Async read:");
 		process_response(&wd_status, transfer->buffer, transfer->actual_length);
 	}
 	if (libusb_submit_transfer(req_transfer) < 0) {
-		wmlog_msg(0, "async read transfer sumbit failed");
+		wmlog_msg(1, "async read transfer sumbit failed");
 	}
 }
 
@@ -233,7 +233,7 @@ static int raise_event(char *event)
 static int if_up()
 {
 	tap_bring_up(tap_fd, tap_dev);
-	wmlog_msg(0, "Starting if-up script...");
+	wmlog_msg(2, "Starting if-up script...");
 	raise_event("if-up");
 	return 0;
 }
@@ -241,7 +241,7 @@ static int if_up()
 /* brings interface down and runs a user-supplied script */
 static int if_down()
 {
-	wmlog_msg(0, "Starting if-down script...");
+	wmlog_msg(2, "Starting if-down script...");
 	raise_event("if-down");
 	tap_bring_down(tap_fd, tap_dev);
 	return 0;
@@ -311,7 +311,7 @@ static int read_tap()
 
 	if (r < 0)
 	{
-		wmlog_msg(0, "Error while reading from TAP interface");
+		wmlog_msg(1, "Error while reading from TAP interface");
 		return r;
 	}
 
@@ -321,7 +321,7 @@ static int read_tap()
 	}
 
 	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
-	wmlog_dumphexasc(1, buf, len, "Outgoing packet:");
+	wmlog_dumphexasc(4, buf, len, "Outgoing packet:");
 	r = set_data(buf, len);
 
 	return r;
@@ -410,13 +410,13 @@ int set_coe(int fd)
 	flags = fcntl(fd, F_GETFD);
 	if (flags == -1)
 	{
-		wmlog_msg(0, "failed to set close-on-exec flag on fd %d", fd);
+		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
 		return -1;
 	}
 	flags |= FD_CLOEXEC;
 	if (fcntl(fd, F_SETFD, flags) == -1)
 	{
-		wmlog_msg(0, "failed to set close-on-exec flag on fd %d", fd);
+		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
 		return -1;
 	}
 
@@ -484,7 +484,7 @@ static int init(void)
 
 	alloc_transfers();
 
-	wmlog_msg(0, "Continuous async read start...");
+	wmlog_msg(2, "Continuous async read start...");
 	CHECK_DISCONNECTED(libusb_submit_transfer(req_transfer));
 
 	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
@@ -505,8 +505,8 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
 
-	wmlog_msg(0, "Chip info: %s", wd_status.chip);
-	wmlog_msg(0, "Firmware info: %s", wd_status.firmware);
+	wmlog_msg(1, "Chip info: %s", wd_status.chip);
+	wmlog_msg(1, "Firmware info: %s", wd_status.firmware);
 
 	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
 	set_data(req_data, len);
@@ -516,7 +516,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_MAC);
 
-	wmlog_msg(0, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+	wmlog_msg(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
 	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
 	set_data(req_data, len);
@@ -553,9 +553,9 @@ static int scan_loop(void)
 			process_events_by_mask(5000, WDS_LINK_STATUS);
 
 			if (wd_status.link_status == 0) {
-				wmlog_msg(0, "Network not found.");
+				wmlog_msg(2, "Network not found.");
 			} else {
-				wmlog_msg(0, "Network found.");
+				wmlog_msg(2, "Network found.");
 			}
 		} else {
 			//len = fill_connection_params1_req(req_data, MAX_PACKET_LEN);
@@ -569,15 +569,15 @@ static int scan_loop(void)
 
 			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
 
-			wmlog_msg(0, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
-			wmlog_msg(0, "BSID: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
+			wmlog_msg(2, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
+			wmlog_msg(2, "BSID: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
 
 			len = fill_state_req(req_data, MAX_PACKET_LEN);
 			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_STATE);
 
-			wmlog_msg(0, "State: %s   Number: %d   Response: %d", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
+			wmlog_msg(2, "State: %s   Number: %d   Response: %d", wimax_states[wd_status.state], wd_status.state, wd_status.link_status);
 
 			if (first_nego_flag) {
 				first_nego_flag = 0;
@@ -780,7 +780,7 @@ static void sighandler_exit(int signum) {
 static void sighandler_wait_child(int signum) {
 	int status;
 	wait3(&status, WNOHANG, NULL);
-	wmlog_msg(0, "Child exited with status %d", status);
+	wmlog_msg(2, "Child exited with status %d", status);
 }
 
 int main(int argc, char **argv)
