@@ -52,11 +52,13 @@ void inc_wmlog_level()
 	wimax_log_level++;
 }
 
+FILE *logfile = NULL;
+
 /* log to stderr */
-static void wmlog_stderr(const char *fmt, va_list va)
+static void wmlog_file(const char *fmt, va_list va)
 {
-	vfprintf(stderr, fmt, va);
-	fprintf(stderr, "\n");
+	vfprintf(logfile, fmt, va);
+	fprintf(logfile, "\n");
 }
 
 /* log to syslog */
@@ -67,17 +69,18 @@ static void wmlog_syslog(const char *fmt, va_list va)
 
 typedef void (*wmlogger_func)(const char *fmt, va_list va);
 
-static wmlogger_func loggers[2] = {[WMLOGGER_STDERR] = wmlog_stderr, [WMLOGGER_SYSLOG] = wmlog_syslog};
-static wmlogger_func selected_logger = wmlog_stderr;
+static wmlogger_func loggers[2] = {[WMLOGGER_FILE] = wmlog_file, [WMLOGGER_SYSLOG] = wmlog_syslog};
+static wmlogger_func selected_logger = wmlog_file;
 
 /* set logger to stderr or syslog */
-void set_wmlogger(const char *progname, int logger)
+void set_wmlogger(const char *progname, int logger, FILE *file)
 {
 	selected_logger = loggers[logger];
 	if (logger == WMLOGGER_SYSLOG) {
 		openlog(progname, LOG_PID, LOG_DAEMON);
 	} else {
 		closelog();
+		logfile = file;
 	}
 }
 
@@ -132,25 +135,5 @@ void wmlog_dumphexasc(int level, const void *buf, int len, const char *fmt, ...)
 		ascii[j - i] = 0;
 		wmlog_msg_priv("  %08x:%s    %s", i, hex, ascii);
 	}
-}
-
-void usage(const char *progname)
-{
-	printf("Usage: %s [options]\n", progname);
-	printf("Options:\n");
-	printf("  -v, --verbose               increase the log level\n");
-	printf("  -q, --quiet                 switch off logging\n");
-	printf("  -d, --daemonize             daemonize after startup\n");
-	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
-	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
-	printf("      --device vid:pid        specify the USB device by VID:PID\n");
-	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
-	printf("  -V, --version               print the version number\n");
-	printf("  -h, --help                  display this help\n");
-}
-
-void version()
-{
-	printf("%s %s\n", PACKAGE_NAME, MADWIMAX_VERSION_MACRO);
 }
 

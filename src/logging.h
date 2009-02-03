@@ -20,6 +20,8 @@
 #ifndef _LOGGING_H
 #define _LOGGING_H
 
+#include <stdio.h>
+
 /* get printable madwimax version */
 const char* get_madwimax_version();
 
@@ -30,21 +32,15 @@ void set_wmlog_level(int level);
 void inc_wmlog_level();
 
 /* set logger */
-#define WMLOGGER_STDERR	0
+#define WMLOGGER_FILE	0
 #define WMLOGGER_SYSLOG	1
-void set_wmlogger(const char *progname, int logger);
+void set_wmlogger(const char *progname, int logger, FILE *file);
 
 /* print wmlog message. */
 void wmlog_msg(int level, const char *fmt, ...);
 
 /* dump message and len bytes from buf in hexadecimal and ASCII. */
 void wmlog_dumphexasc(int level, const void *buf, int len, const char *fmt, ...);
-
-/* print usage information */
-void usage(const char *prog);
-
-/* print version */
-void version();
 
 #endif /* _LOGGING_H */
 

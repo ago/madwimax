@@ -43,6 +43,8 @@ static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
 
+static FILE *logfile = NULL;
+
 #define MATCH_BY_LIST		0
 #define MATCH_BY_VID_PID	1
 #define MATCH_BY_BUS_DEV	2
@@ -590,6 +592,30 @@ static int scan_loop(void)
 	return 0;
 }
 
+/* print usage information */
+void usage(const char *progname)
+{
+	printf("Usage: %s [options]\n", progname);
+	printf("Options:\n");
+	printf("  -v, --verbose               increase the log level\n");
+	printf("  -q, --quiet                 switch off logging\n");
+	printf("  -d, --daemonize             daemonize after startup\n");
+	printf("  -l, --log-file              write log to the specified file instead of the\n");
+	printf("                              other methods\n");
+	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
+	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
+	printf("      --device vid:pid        specify the USB device by VID:PID\n");
+	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
+	printf("  -V, --version               print the version number\n");
+	printf("  -h, --help                  display this help\n");
+}
+
+/* print version */
+void version()
+{
+	printf("%s %s\n", PACKAGE_NAME, get_madwimax_version());
+}
+
 static void parse_args(int argc, char **argv)
 {
 	while (1)
@@ -602,6 +628,7 @@ static void parse_args(int argc, char **argv)
 			{"verbose",		no_argument,		0, 'v'},
 			{"quiet",		no_argument,		0, 'q'},
 			{"daemonize",		no_argument,		0, 'd'},
+			{"log-file",		required_argument,	0, 'l'},
 			{"diode-off",		no_argument,		0, 'o'},
 			{"detach-dvd",		no_argument,		0, 'f'},
 			{"device",		required_argument,	0, 1},
@@ -611,7 +638,7 @@ static void parse_args(int argc, char **argv)
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "vqdofVh", long_options, &option_index);
+		c = getopt_long(argc, argv, "vqdl:ofVh", long_options, &option_index);
 
 		/* detect the end of the options. */
 		if (c == -1)
@@ -629,6 +656,15 @@ static void parse_args(int argc, char **argv)
 				}
 			case 'd': {
 					daemonize = 1;
+					break;
+				}
+			case 'l': {
+					logfile = fopen(optarg, "a");
+					if (logfile == NULL) {
+						fprintf(stderr, "Error opening log file '%s': ", optarg);
+						perror(NULL);
+						exit(1);
+					}
 					break;
 				}
 			case 'o': {
@@ -708,32 +744,32 @@ static void parse_args(int argc, char **argv)
 	}
 }
 
-static void exit_close_usb(int code);
-
 static void exit_release_resources(int code)
 {
-	if(req_transfer != NULL) {
-		libusb_cancel_transfer(req_transfer);
-		libusb_free_transfer(req_transfer);
-	}
 	if(tap_fd >= 0) {
 		if_down();
 		while (wait(NULL) > 0) {}
 		tap_close(tap_fd, tap_dev);
 	}
-	libusb_set_pollfd_notifiers(ctx, NULL, NULL, NULL);
-	if(fds != NULL) {
-		free(fds);
+	if(ctx != NULL) {
+		if(req_transfer != NULL) {
+			libusb_cancel_transfer(req_transfer);
+			libusb_free_transfer(req_transfer);
+		}
+		libusb_set_pollfd_notifiers(ctx, NULL, NULL, NULL);
+		if(fds != NULL) {
+			free(fds);
+		}
+		if(devh != NULL) {
+			libusb_release_interface(devh, 0);
+			libusb_unlock_events(ctx);
+			libusb_close(devh);
+		}
+		libusb_exit(ctx);
 	}
-	libusb_release_interface(devh, 0);
-	exit_close_usb(code);
-}
-
-static void exit_close_usb(int code)
-{
-	libusb_unlock_events(ctx);
-	libusb_close(devh);
-	libusb_exit(ctx);
+	if(logfile != NULL) {
+		fclose(logfile);
+	}
 	exit(code);
 }
 
@@ -754,24 +790,37 @@ int main(int argc, char **argv)
 
 	parse_args(argc, argv);
 
-	if (daemonize) {
-		wmlog_msg(0, "Daemonizing, redirecting log to syslog...");
-		set_wmlogger(argv[0], WMLOGGER_SYSLOG);
-		daemon(0, 0);
+	sigact.sa_handler = sighandler_exit;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGQUIT, &sigact, NULL);
+	sigact.sa_handler = sighandler_wait_child;
+	sigaction(SIGCHLD, &sigact, NULL);
+
+	if (logfile != NULL) {
+		set_wmlogger(argv[0], WMLOGGER_FILE, logfile);
+	} else if (daemonize) {
+		set_wmlogger(argv[0], WMLOGGER_SYSLOG, NULL);
 	} else {
-		set_wmlogger(argv[0], WMLOGGER_STDERR);
+		set_wmlogger(argv[0], WMLOGGER_FILE, stderr);
+	}
+
+	if (daemonize) {
+		daemon(0, 0);
 	}
 
 	r = libusb_init(&ctx);
 	if (r < 0) {
 		wmlog_msg(0, "failed to initialise libusb");
-		exit(1);
+		exit_release_resources(1);
 	}
 
 	devh = find_wimax_device();
 	if (devh == NULL) {
 		wmlog_msg(0, "Could not find/open device");
-		exit_close_usb(1);
+		exit_release_resources(1);
 	}
 
 	if (detach_dvd && libusb_kernel_driver_active(devh, IF_DVD) == 1) {
@@ -786,18 +835,9 @@ int main(int argc, char **argv)
 	r = libusb_claim_interface(devh, IF_MODEM);
 	if (r < 0) {
 		wmlog_msg(0, "claim usb interface error %d", r);
-		exit_close_usb(1);
+		exit_release_resources(1);
 	}
 	wmlog_msg(0, "claimed interface");
-
-	sigact.sa_handler = sighandler_exit;
-	sigemptyset(&sigact.sa_mask);
-	sigact.sa_flags = 0;
-	sigaction(SIGINT, &sigact, NULL);
-	sigaction(SIGTERM, &sigact, NULL);
-	sigaction(SIGQUIT, &sigact, NULL);
-	sigact.sa_handler = sighandler_wait_child;
-	sigaction(SIGCHLD, &sigact, NULL);
 
 	alloc_fds();
 	libusb_set_pollfd_notifiers(ctx, cb_add_pollfd, cb_remove_pollfd, NULL);

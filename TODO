@@ -1,6 +1,5 @@
 Driver:
  * Add man page and docs
- * Write to syslog or/and some separate debug log
  * Use dbus(?) to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
