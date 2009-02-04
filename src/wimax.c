@@ -131,6 +131,7 @@ static struct libusb_device_handle* find_wimax_device(void)
 		if (r < 0) {
 			continue;
 		}
+		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), desc.idVendor, desc.idProduct);
 		switch (match_method) {
 			case MATCH_BY_LIST: {
 				for (j = 0; j < sizeof(wimax_dev_ids); j++) {
@@ -823,6 +824,8 @@ int main(int argc, char **argv)
 		exit_release_resources(1);
 	}
 
+	wmlog_msg(0, "Device found");
+
 	if (detach_dvd && libusb_kernel_driver_active(devh, IF_DVD) == 1) {
 		r = libusb_detach_kernel_driver(devh, IF_DVD);
 		if (r < 0) {
@@ -834,10 +837,10 @@ int main(int argc, char **argv)
 
 	r = libusb_claim_interface(devh, IF_MODEM);
 	if (r < 0) {
-		wmlog_msg(0, "claim usb interface error %d", r);
+		wmlog_msg(0, "Claim usb interface error %d", r);
 		exit_release_resources(1);
 	}
-	wmlog_msg(0, "claimed interface");
+	wmlog_msg(0, "Claimed interface");
 
 	alloc_fds();
 	libusb_set_pollfd_notifiers(ctx, cb_add_pollfd, cb_remove_pollfd, NULL);
