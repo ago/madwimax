@@ -97,7 +97,7 @@ static struct libusb_transfer *req_transfer = NULL;
 static unsigned char read_buffer[MAX_PACKET_LEN];
 
 static int tap_fd = -1;
-static char tap_dev[20];
+static char tap_dev[20] = "wimax%d";
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
