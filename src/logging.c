@@ -59,6 +59,7 @@ static void wmlog_file(const char *fmt, va_list va)
 {
 	vfprintf(logfile, fmt, va);
 	fprintf(logfile, "\n");
+	fflush(logfile);
 }
 
 /* log to syslog */
