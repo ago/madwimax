@@ -18,8 +18,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#define HAVE_LINUX_IF_TUN_H
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -32,6 +30,7 @@
 #include <linux/if.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
+#include <linux/if_tun.h>
 
 #include "wimax.h"
 
@@ -69,9 +68,6 @@ static int tun_open_common0(char *dev, int istun)
 	return -1;
 }
 
-#ifdef HAVE_LINUX_IF_TUN_H /* New driver support */
-#include <linux/if_tun.h>
-
 #ifndef OTUNSETNOCSUM
 /* pre 2.4.6 compatibility */
 #define OTUNSETNOCSUM	(('T'<< 8) | 200)
@@ -96,9 +92,9 @@ static int tun_open_common(char *dev, int istun)
 
 	if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
 		if (errno == EBADFD) {
-		/* Try old ioctl */
- 		if (ioctl(fd, OTUNSETIFF, (void *) &ifr) < 0)
-			goto failed;
+			/* Try old ioctl */
+ 			if (ioctl(fd, OTUNSETIFF, (void *) &ifr) < 0)
+				goto failed;
 		} else
 			goto failed;
 	}
@@ -110,12 +106,6 @@ failed:
 	close(fd);
 	return -1;
 }
-
-#else
-
-# define tun_open_common(dev, type) tun_open_common0(dev, type)
-
-#endif /* New driver support */
 
 
 int tap_open(char *dev) { return tun_open_common(dev, 0); }
