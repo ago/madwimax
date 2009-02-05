@@ -93,6 +93,7 @@ char *wimax_states[] = {"INIT", "SYNC", "NEGO", "NORMAL", "SLEEP", "IDLE", "HHO"
 static struct libusb_context *ctx = NULL;
 static struct libusb_device_handle *devh = NULL;
 static struct libusb_transfer *req_transfer = NULL;
+static int kernel_driver_active = 0;
 
 static unsigned char read_buffer[MAX_PACKET_LEN];
 
@@ -763,6 +764,8 @@ static void exit_release_resources(int code)
 		}
 		if(devh != NULL) {
 			libusb_release_interface(devh, 0);
+			if (kernel_driver_active)
+				libusb_attach_kernel_driver(devh, 0);
 			libusb_unlock_events(ctx);
 			libusb_close(devh);
 		}
@@ -832,6 +835,16 @@ int main(int argc, char **argv)
 			wmlog_msg(0, "kernel driver detach error %d", r);
 		} else {
 			wmlog_msg(0, "detached pseudo-DVD kernel driver");
+		}
+	}
+
+	if (libusb_kernel_driver_active(devh, IF_MODEM) == 1) {
+		kernel_driver_active = 1;
+		r = libusb_detach_kernel_driver(devh, IF_MODEM);
+		if (r < 0) {
+			wmlog_msg(0, "kernel driver detach error %d", r);
+		} else {
+			wmlog_msg(0, "detached modem kernel driver");
 		}
 	}
 
