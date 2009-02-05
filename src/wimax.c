@@ -135,7 +135,7 @@ static struct libusb_device_handle* find_wimax_device(void)
 		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), desc.idVendor, desc.idProduct);
 		switch (match_method) {
 			case MATCH_BY_LIST: {
-				for (j = 0; j < sizeof(wimax_dev_ids); j++) {
+				for (j = 0; j < sizeof(wimax_dev_ids) / sizeof(usb_device_id_t); j++) {
 					if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
 						found = dev;
 						break;
