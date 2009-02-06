@@ -1,6 +1,6 @@
 Driver:
  * Add man page and docs
- * Use dbus(?) to communicate with frontends
+ * Use unix sockets to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
  1. Dump current link status (perfect for use with conky)
