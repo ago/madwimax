@@ -26,6 +26,7 @@ if test ! -d "${udevdir}"; then
 fi
 
 PIDPATH="/var/run"
+script="generic"
 
 # Checks for programs.
 AC_PROG_CC
@@ -87,6 +88,32 @@ else
 fi
 AM_CONDITIONAL(WITH_UDEV, test -n "${udevdir}")
 
+AC_MSG_CHECKING(which event script to use)
+AC_ARG_WITH(script,
+	AC_HELP_STRING([--with-script=NAME], [which event script to use (generic)]),
+	[
+		case "${withval}" in
+			yes)
+			;;
+			auto)
+			;;
+			no)
+				script=""
+			;;
+			*)
+				script="${withval}"
+			;;
+		esac
+	])
+if test -n "${script}"; then
+	AC_MSG_RESULT(using ${script})
+	scriptfile="scripts/events/event.sh.${script}"
+else
+	AC_MSG_RESULT(no)
+	scriptfile=""
+fi
+AM_CONDITIONAL(WITH_SCRIPT, test -n "${script}")
+
 # expand ${sbindir} and write it out
 conftemp="${sbindir}"
 eval conftemp=\"${conftemp}\"
@@ -109,6 +136,8 @@ AC_DEFINE_UNQUOTED(SYSCONFDIR, "${conftemp}",
 AC_SUBST(SBINDIR)
 AC_SUBST(SYSCONFDIR)
 AC_SUBST(udevdir)
+AC_SUBST(script)
+
 
 
 AC_CONFIG_FILES([
@@ -116,7 +145,7 @@ AC_CONFIG_FILES([
 	include/Makefile
 	src/Makefile
 	scripts/events/Makefile
-	scripts/events/event.sh
+	${scriptfile}
 	scripts/udev/Makefile
 	scripts/udev/z60_madwimax.rules
 	scripts/Makefile

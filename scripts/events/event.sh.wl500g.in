@@ -1,0 +1,20 @@
+#!/bin/sh
+# Usage: event.sh <event> <if-name>
+
+case "$1" in
+start)
+	;;
+end)
+	;;
+if-up)
+	udhcpc -b -p /var/run/udhcpc."$2".pid -i "$2" -s /tmp/udhcpc
+	;;
+if-down)
+	cat /var/run/udhcpc."$2".pid | xargs -i kill -TERM {}
+	;;
+*)
+	echo "Usage: $0 {start|end|if-up|if-down}" >&2
+	exit 3
+	;;
+esac
+
