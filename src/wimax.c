@@ -214,6 +214,27 @@ int get_link_status()
 	return wd_status.link_status;
 }
 
+/* set close-on-exec flag on the file descriptor */
+int set_coe(int fd)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFD);
+	if (flags == -1)
+	{
+		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
+		return -1;
+	}
+	flags |= FD_CLOEXEC;
+	if (fcntl(fd, F_SETFD, flags) == -1)
+	{
+		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
+		return -1;
+	}
+
+	return 0;
+}
+
 /* run specified script */
 static int raise_event(char *event)
 {
@@ -434,27 +455,6 @@ static int process_events_by_mask(int timeout, unsigned int event_mask)
 	wd_status.info_updated &= ~event_mask;
 
 	return (delay > 0) ? delay : 0;
-}
-
-/* set close-on-exec flag on the file descriptor */
-int set_coe(int fd)
-{
-	int flags;
-
-	flags = fcntl(fd, F_GETFD);
-	if (flags == -1)
-	{
-		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
-		return -1;
-	}
-	flags |= FD_CLOEXEC;
-	if (fcntl(fd, F_SETFD, flags) == -1)
-	{
-		wmlog_msg(1, "failed to set close-on-exec flag on fd %d", fd);
-		return -1;
-	}
-
-	return 0;
 }
 
 int alloc_fds()
