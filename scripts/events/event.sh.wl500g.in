@@ -2,18 +2,21 @@
 # Usage: event.sh <event> <if-name>
 
 case "$1" in
-start)
-	;;
-end)
+if-create)
+	iptables -I FORWARD -o "$2" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 	;;
 if-up)
-	udhcpc -b -p /var/run/udhcpc."$2".pid -i "$2" -s /tmp/udhcpc
+	udhcpc -b -p /var/run/udhcpc."$2".pid -i "$2" -s /opt/etc/udhcpc/udhcpc.script
+	iptables -t nat -A POSTROUTING -o "$2" ! -s $(ifconfig "$2" | sed -n 's/^.*inet addr:\([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\)  .*$/\1/p') -j MASQUERADE
 	;;
 if-down)
 	cat /var/run/udhcpc."$2".pid | xargs -i kill -TERM {}
 	;;
+if-release)
+	iptables -D FORWARD -o "$2" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+	;;
 *)
-	echo "Usage: $0 {start|end|if-up|if-down}" >&2
+	echo "Usage: $0 { if-create | if-up | if-down | if-release }" >&2
 	exit 3
 	;;
 esac

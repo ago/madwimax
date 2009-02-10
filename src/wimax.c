@@ -99,6 +99,7 @@ static unsigned char read_buffer[MAX_PACKET_LEN];
 
 static int tap_fd = -1;
 static char tap_dev[20] = "wimax%d";
+static int tap_if_up = 0;
 
 static nfds_t nfds;
 static struct pollfd* fds = NULL;
@@ -232,20 +233,51 @@ static int raise_event(char *event)
 }
 
 /* brings interface up and runs a user-supplied script */
+static int if_create()
+{
+	tap_fd = tap_open(tap_dev);
+	if (tap_fd < 0) {
+		wmlog_msg(0, "failed to allocate tap interface");
+		wmlog_msg(0,
+				"You should have TUN/TAP driver compiled in the kernel or as a kernel module.\n"
+				"If 'modprobe tun' doesn't help then recompile your kernel.");
+		exit_release_resources(1);
+	}
+	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
+	tap_set_mtu(tap_fd, tap_dev, 1386);
+	set_coe(tap_fd);
+	wmlog_msg(2, "Starting if-create script...");
+	raise_event("if-create");
+	return 0;
+}
+
+/* brings interface up and runs a user-supplied script */
 static int if_up()
 {
 	tap_bring_up(tap_fd, tap_dev);
 	wmlog_msg(2, "Starting if-up script...");
 	raise_event("if-up");
+	tap_if_up = 1;
 	return 0;
 }
 
 /* brings interface down and runs a user-supplied script */
 static int if_down()
 {
+	if (!tap_if_up) return 0;
+	tap_if_up = 0;
 	wmlog_msg(2, "Starting if-down script...");
 	raise_event("if-down");
 	tap_bring_down(tap_fd, tap_dev);
+	return 0;
+}
+
+/* brings interface down and runs a user-supplied script */
+static int if_release()
+{
+	wmlog_msg(2, "Starting if-release script...");
+	raise_event("if-release");
+	tap_close(tap_fd, tap_dev);
 	return 0;
 }
 
@@ -751,7 +783,7 @@ static void exit_release_resources(int code)
 	if(tap_fd >= 0) {
 		if_down();
 		while (wait(NULL) > 0) {}
-		tap_close(tap_fd, tap_dev);
+		if_release();
 	}
 	if(ctx != NULL) {
 		if(req_transfer != NULL) {
@@ -864,17 +896,7 @@ int main(int argc, char **argv)
 		exit_release_resources(1);
 	}
 
-	tap_fd = tap_open(tap_dev);
-	if (tap_fd < 0) {
-		wmlog_msg(0, "failed to allocate tap interface");
-		wmlog_msg(0,
-				"You should have TUN/TAP driver compiled in the kernel or as a kernel module.\n"
-				"If 'modprobe tun' doesn't help then recompile your kernel.");
-		exit_release_resources(1);
-	}
-	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
-	tap_set_mtu(tap_fd, tap_dev, 1386);
-	set_coe(tap_fd);
+	if_create();
 	cb_add_pollfd(tap_fd, POLLIN, NULL);
 
 	wmlog_msg(0, "Allocated tap interface: %s", tap_dev);

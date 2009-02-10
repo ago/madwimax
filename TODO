@@ -1,5 +1,6 @@
 Driver:
  * Add man page and docs
+ * Persistent network interface naming
  * Use unix sockets to communicate with frontends
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
