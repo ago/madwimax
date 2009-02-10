@@ -267,6 +267,7 @@ static int if_create()
 	tap_set_hwaddr(tap_fd, tap_dev, wd_status.mac);
 	tap_set_mtu(tap_fd, tap_dev, 1386);
 	set_coe(tap_fd);
+	wmlog_msg(0, "Allocated tap interface: %s", tap_dev);
 	wmlog_msg(2, "Starting if-create script...");
 	raise_event("if-create");
 	return 0;
@@ -784,6 +785,7 @@ static void exit_release_resources(int code)
 		if_down();
 		while (wait(NULL) > 0) {}
 		if_release();
+		while (wait(NULL) > 0) {}
 	}
 	if(ctx != NULL) {
 		if(req_transfer != NULL) {
@@ -898,8 +900,6 @@ int main(int argc, char **argv)
 
 	if_create();
 	cb_add_pollfd(tap_fd, POLLIN, NULL);
-
-	wmlog_msg(0, "Allocated tap interface: %s", tap_dev);
 
 	r = scan_loop();
 	if (r < 0) {
