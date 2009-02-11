@@ -14,7 +14,7 @@ config.status
 config.h
 stamp-h1
 /include/madwimax_version.h
-/scripts/events/event.sh
+/scripts/events/event.sh*
 /scripts/udev/z60_madwimax.rules
 /src/.deps/
 /src/*.o
