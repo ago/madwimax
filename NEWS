@@ -1,3 +1,17 @@
+Version 0.1.0
+  - Added a table of supported devices (fixes inability to connect to
+    the devices with BL22 firmware out of the box).
+  - Also device mathcing can now be controlled by the command-line options
+    (namely --device and --exact-device). See the help.
+  - Added an option to detach pseudo-DVD kernel driver by the driver
+    itself (so it works without udev/sysfs).
+  - Now autotools are used for build system.
+  - The driver can run user-supplied scripts on network connect/disconnect.
+  - TAP interface mtu is set to 1386 at startup.
+  - Can now log to the specified file/syslog (when daemonized).
+  - Allocated network interface is called wimaxN instead of tapN.
+  - Various fixes and enhancements.
+
 Version 0.0.2
   - Fixed reconnection issue. The driver was not able to repair a failed
     connection at all.

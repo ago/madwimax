@@ -1,3 +1,222 @@
+2009-02-11 08:54  Alexander Gordeev <gordick@gmail.com>
+
+	* .gitignore, scripts/events/Makefile.am: Fix make dist and
+	  distclean targets. Fix .gitignore.
+
+2009-02-10 19:18  Alexander Gordeev <gordick@gmail.com>
+
+	* scripts/events/event.sh.wl500g.in, src/wimax.c: Fix event issue.
+	  Remove the old masquerade rule when interface goes down.
+
+2009-02-10 18:52  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Fix set_coe.
+
+2009-02-10 18:46  Alexander Gordeev <gordick@gmail.com>
+
+	* TODO, scripts/events, scripts/events/event.sh.generic.in,
+	  scripts/events/event.sh.wl500g.in, src/wimax.c: Update wl500g
+	  script. Add if-create and if-release events.
+
+2009-02-08 00:29  Alexander Gordeev <gordick@gmail.com>
+
+	* src/logging.c, src/logging.h, src/protocol.c, src/protocol.h,
+	  src/tap_dev.c, src/tap_dev.h, src/wimax.c, src/wimax.h: Fix
+	  copyright notices in source files.
+
+2009-02-07 23:44  Alexander Gordeev <gordick@gmail.com>
+
+	* scripts/events: Fix svn:ignore.
+
+2009-02-07 22:16  Alexander Gordeev <gordick@gmail.com>
+
+	* configure.ac, scripts/events/Makefile.am,
+	  scripts/events/event.sh.generic.in, scripts/events/event.sh.in,
+	  scripts/events/event.sh.wl500g.in: Can now select a script to
+	  use. Add generic and wl500g scripts.
+
+2009-02-06 12:20  Alexander Gordeev <gordick@gmail.com>
+
+	* INSTALL, THANKS, TODO: Various documentation updates.
+
+2009-02-06 12:04  Alexander Gordeev <gordick@gmail.com>
+
+	* scripts/if-up-down: Delete old directory for event scripts.
+
+2009-02-05 22:07  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Fix bug in device list size calculation.
+
+2009-02-05 20:45  Alexander Gordeev <gordick@gmail.com>
+
+	* src/logging.c: Flush log file after each entry.
+
+2009-02-05 08:10  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Detach modem interface kernel driver if active and
+	  reattach it at exit.
+
+2009-02-05 01:06  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Name network interface wimax* instead of tap*.
+
+2009-02-05 01:05  Alexander Gordeev <gordick@gmail.com>
+
+	* src/tap_dev.c: Remove old code.
+
+2009-02-04 23:25  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Print some info about the scanned devices.
+
+2009-02-03 23:46  Alexander Gordeev <gordick@gmail.com>
+
+	* src/protocol.c, src/wimax.c: Rearranged message log levels.
+
+2009-02-03 23:22  Alexander Gordeev <gordick@gmail.com>
+
+	* TODO, src/logging.c, src/logging.h, src/wimax.c: Add logging to
+	  file option.
+
+2009-02-01 00:37  Alexander Gordeev <gordick@gmail.com>
+
+	* configure.ac, src/logging.c, src/logging.h, src/wimax.c: Log to
+	  syslog if daemonized.
+
+2009-01-31 23:08  Alexander Gordeev <gordick@gmail.com>
+
+	* src/logging.c, src/logging.h, src/protocol.c, src/wimax.c: Rename
+	  the logging functions: debug -> wmlog.
+
+2009-01-31 22:59  Alexander Gordeev <gordick@gmail.com>
+
+	* src/logging.c, src/protocol.c, src/wimax.c: Print new line after
+	  every debug message.
+
+2009-01-27 15:20  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Set default MTU to 1386.
+
+2009-01-25 20:58  Alexander Gordeev <gordick@gmail.com>
+
+	* ., scripts/events: Fix svn:ignore.
+
+2009-01-24 15:19  Alexander Gordeev <gordick@gmail.com>
+
+	* .gitignore, configure.ac, scripts/Makefile.am, scripts/events,
+	  scripts/events/Makefile.am, scripts/events/event.sh.in,
+	  scripts/if-up-down/Makefile.am, scripts/if-up-down/if-down,
+	  scripts/if-up-down/if-up, src/wimax.c: update scripts
+
+2009-01-24 15:18  Alexander Gordeev <gordick@gmail.com>
+
+	* include/Makefile.am: add git last commit to the version string
+
+2009-01-24 15:18  Alexander Gordeev <gordick@gmail.com>
+
+	* .gitignore: add .gitignore
+
+2009-01-17 02:28  Alexander Gordeev <gordick@gmail.com>
+
+	* src/Makefile.am: Fix madwimax LDFLAGS for wl500g environment.
+
+2009-01-16 23:50  Alexander Gordeev <gordick@gmail.com>
+
+	* include, src: Fix svn:ignore.
+
+2009-01-16 23:45  Alexander Gordeev <gordick@gmail.com>
+
+	* Makefile.am, configure.ac, scripts, scripts/Makefile.am,
+	  scripts/if-up-down, scripts/if-up-down/Makefile.am, scripts/udev,
+	  scripts/udev/Makefile.am, scripts/udev/z60_madwimax.rules,
+	  scripts/udev/z60_madwimax.rules.in, src/Makefile.am,
+	  src/logging.c, src/protocol.c, src/wimax.c: Work on build scripts
+	  mostly done.
+
+2009-01-16 10:56  Alexander Gordeev <gordick@gmail.com>
+
+	* include/Makefile.am: Prepend svn revision with 'r' for clarity.
+
+2009-01-16 10:52  Alexander Gordeev <gordick@gmail.com>
+
+	* ., Makefile.am, configure.ac, include, include/Makefile.am,
+	  src/Makefile.am, src/logging.c, src/logging.h, src/wimax.c,
+	  src/wimax.h: Move all debug/logging output code to logging.[ch].
+	  Include svn revision in the version string.
+
+2009-01-15 23:23  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Add an option for version printing. Work on option
+	  parsing code.
+
+2009-01-15 18:57  Alexander Gordeev <gordick@gmail.com>
+
+	* TODO, scripts/udev/z60_madwimax.rules, src/wimax.c: Add various
+	  device matching methods.
+
+2009-01-15 14:41  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Change mtu to 1400.
+
+2009-01-15 09:28  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Print an explanation text in case of problems with
+	  the TAP interface.
+
+2009-01-14 23:38  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Add list of the supported devices.
+
+2009-01-14 14:16  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Exit only when device is disconnected.
+
+2009-01-09 04:18  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Add an option to detach pseudo-DVD kernel driver on
+	  startup.
+
+2009-01-09 03:28  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Explicitely specify libusb context.
+
+2009-01-08 23:42  Alexander Gordeev <gordick@gmail.com>
+
+	* src/wimax.c: Fix bugs.
+
+2009-01-08 12:46  Alexander Gordeev <gordick@gmail.com>
+
+	* configure.ac, scripts/if-up-down/if-up, src/wimax.c: Update
+	  configure.ac. Run if-down on exit.
+
+2009-01-08 11:13  Alexander Gordeev <gordick@gmail.com>
+
+	* TODO: Update TODO.
+
+2009-01-08 10:58  Alexander Gordeev <gordick@gmail.com>
+
+	* scripts/if-up-down/if-down, scripts/if-up-down/if-up: Set
+	  svn:executable for scripts.
+
+2009-01-08 10:53  Alexander Gordeev <gordick@gmail.com>
+
+	* scripts/if-up-down, scripts/if-up-down/if-down,
+	  scripts/if-up-down/if-up, src/tap_dev.c, src/wimax.c: Run
+	  user-supplied scripts on network connect/disconnect.
+
+2008-12-30 17:29  Alexander Gordeev <gordick@gmail.com>
+
+	* configure.ac, src/tap_dev.c: Add more checks reported by
+	  autoscan.
+
+2008-12-30 14:36  Alexander Gordeev <gordick@gmail.com>
+
+	* ., src: Update svn:ignore.
+
+2008-12-30 14:32  Alexander Gordeev <gordick@gmail.com>
+
+	* AUTHORS, ChangeLog, Makefile, Makefile.am, TODO, configure.ac,
+	  src/Makefile.am: Use autotools to build and install everything.
+
 2008-12-29 03:38  Alexander Gordeev <gordick@gmail.com>
 
 	* TODO: Update TODO.
