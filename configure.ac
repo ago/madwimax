@@ -50,7 +50,8 @@ AC_FUNC_WAIT3
 AC_CHECK_FUNCS([gettimeofday memset socket strchr strerror strtoul])
 
 # Check for libusb-1.0
-PKG_CHECK_MODULES([libusb1], libusb-1.0,,exit)
+PKG_CHECK_MODULES([libusb1], libusb-1.0,,AC_MSG_ERROR([libusb-1.0 not found$(test ! "${PKG_CONFIG}" && (echo; echo Try to install pkg-config first.))]))
+
 CFLAGS="$CFLAGS $libusb1_CFLAGS"
 LDFLAGS="$LDFLAGS $libusb1_LIBS"
 
