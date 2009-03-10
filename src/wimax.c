@@ -61,6 +61,7 @@ typedef struct usb_device_id_t {
 static usb_device_id_t wimax_dev_ids[] = {
 	{ 0x04e8, 0x6761 },
 	{ 0x04e9, 0x6761 },
+	{ 0x04e8, 0x6731 },
 };
 
 /* for other methods of matching... */

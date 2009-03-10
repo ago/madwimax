@@ -6,5 +6,6 @@ ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6761", ATTR{bInterfaceNumber}=="01",
 ATTRS{idVendor}=="04e9", ATTRS{idProduct}=="6761", ATTR{bInterfaceNumber}=="01", RUN+="/bin/sh -c '/bin/echo -n $kernel > /sys/$devpath/driver/unbind'"
 #ATTR{idVendor}=="04e8", ATTR{idProduct}=="6761", RUN+="@SBINDIR@/madwimax -qd --exact-device=$attr{busnum}/$attr{devnum}"
 #ATTR{idVendor}=="04e9", ATTR{idProduct}=="6761", RUN+="@SBINDIR@/madwimax -qd --exact-device=$attr{busnum}/$attr{devnum}"
+#ATTR{idVendor}=="04e8", ATTR{idProduct}=="6731", RUN+="@SBINDIR@/madwimax -qd --exact-device=$attr{busnum}/$attr{devnum}"
 
 LABEL="madwimax_rules_end"
