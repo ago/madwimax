@@ -439,6 +439,8 @@ static int process_events_by_mask(int timeout, unsigned int event_mask)
 
 	CHECK_NEGATIVE(gettimeofday(&start, NULL));
 
+	wd_status.info_updated &= ~event_mask;
+
 	while ((event_mask == 0 || (wd_status.info_updated & event_mask) != event_mask) && delay >= 0) {
 		long a;
 
