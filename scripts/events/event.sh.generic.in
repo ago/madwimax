@@ -8,7 +8,7 @@ if-up)
 	if [ -x /sbin/dhclient3 ]; then
 		dhclient3 -nw -pf /var/run/dhclient."$2".pid -lf /var/lib/dhcp3/dhclient."$2".leases "$2" >/dev/null 2>&1
 	elif [ -x /sbin/dhclient ]; then
-		dhclient -e -pf /var/run/dhclient."$2".pid -lf /var/lib/dhcp/dhclient."$2".leases "$2"
+		dhclient -pf /var/run/dhclient."$2".pid -lf /var/lib/dhcp/dhclient."$2".leases "$2"
 	elif [ -x /sbin/pump ]; then
 		pump -i "$2"
 	elif [ -x /sbin/udhcpc ]; then
