@@ -21,11 +21,11 @@ if-down)
 	if [ -x /sbin/dhclient3 ]; then
 		/sbin/dhclient3 -r -pf /var/run/dhclient."$2".pid -lf /var/lib/dhcp3/dhclient."$2".leases "$2" >/dev/null 2>&1
 	elif [ -x /sbin/dhclient ]; then
-		cat /var/run/dhclient."$2".pid | xargs -i kill -TERM {}
+		kill -TERM $(cat /var/run/dhclient."$2".pid)
 	elif [ -x /sbin/pump ]; then
 		/sbin/pump -i "$2" -r
 	elif [ -x /sbin/udhcpc ]; then
-		cat /var/run/udhcpc."$2".pid | xargs -i kill -TERM {}
+		kill -TERM $(cat /var/run/udhcpc."$2".pid)
 	elif [ -x /sbin/dhcpcd ]; then
 		/sbin/dhcpcd -k "$2"
 	fi
