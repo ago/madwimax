@@ -1,6 +1,6 @@
 if WITH_SCRIPT
 
-eventsdir = $(sysconfdir)
+eventsdir = $(sysconfdir)/madwimax
 events_SCRIPTS = event.sh
 
 event.sh: event.sh.$(script)
