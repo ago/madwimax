@@ -639,12 +639,12 @@ void usage(const char *progname)
 	printf("  -v, --verbose               increase the log level\n");
 	printf("  -q, --quiet                 switch off logging\n");
 	printf("  -d, --daemonize             daemonize after startup\n");
-	printf("  -l, --log-file              write log to the specified file instead of the\n");
+	printf("  -l, --log-file=file         write log to the specified file instead of the\n");
 	printf("                              other methods\n");
 	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
 	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
-	printf("      --device vid:pid        specify the USB device by VID:PID\n");
-	printf("      --exact-device bus/dev  specify the exact USB bus/device (use with care!)\n");
+	printf("      --device=vid:pid        specify the USB device by VID:PID\n");
+	printf("      --exact-device=bus/dev  specify the exact USB bus/device (use with care!)\n");
 	printf("  -V, --version               print the version number\n");
 	printf("  -h, --help                  display this help\n");
 }
