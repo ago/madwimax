@@ -1,1 +1,1 @@
-SUBDIRS = include src scripts
+SUBDIRS = include man src scripts

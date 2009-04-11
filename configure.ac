@@ -144,6 +144,7 @@ AC_SUBST(script)
 AC_CONFIG_FILES([
 	Makefile
 	include/Makefile
+	man/Makefile
 	src/Makefile
 	scripts/events/Makefile
 	${scriptfile}
