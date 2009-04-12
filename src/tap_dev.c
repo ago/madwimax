@@ -1,5 +1,6 @@
 /*
- * This is a proof-of-concept driver for Samsung SWC-U200 wimax dongle.
+ * This is a reverse-engineered driver for mobile WiMAX (802.16e) devices
+ * based on Samsung CMC-730 chip.
  * Parts of the code in this file are taken from various GPL'd software.
  * Copyright (C) 2008-2009 Alexander Gordeev <lasaine@lvk.cs.msu.su>
  *

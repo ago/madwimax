@@ -1,5 +1,5 @@
-This is MadWimax, a proof-of-concept driver for Samsung SWC-U200 Mobile WiMax
-dongle.
+This is MadWimax, a reverse-engineered linux driver for mobile WiMAX
+(802.16e) devices based on Samsung CMC-730 chip.
 
 MadWimax is provided "as is" with no warranty. The exact terms
 under which you may use and (re)distribute this program are detailed
