@@ -53,7 +53,7 @@ int fill_auth_policy_req(unsigned char *buf, int len);
 
 int fill_auth_method_req(unsigned char *buf, int len);
 
-int fill_auth_set_cmd(unsigned char *buf, int len);
+int fill_auth_set_cmd(unsigned char *buf, int len, char *netid);
 
 int fill_find_network_req(unsigned char *buf, int len, unsigned short level);
 

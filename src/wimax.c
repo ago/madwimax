@@ -573,7 +573,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN);
+	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN, "@yota.ru");
 	set_data(req_data, len);
 
 	return 0;

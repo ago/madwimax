@@ -255,9 +255,15 @@ int fill_auth_method_req(unsigned char *buf, int len)
 	return fill_normal_C_req(buf, 0x20, 0xc, 0x0, NULL);
 }
 
-int fill_auth_set_cmd(unsigned char *buf, int len)
+int fill_auth_set_cmd(unsigned char *buf, int len, char *netid)
 {
-	unsigned char param[0xd] = {0x00, 0x10, 0x00, 0x09, 0x40, 0x79, 0x6f, 0x74, 0x61, 0x2e, 0x72, 0x75, 0x00};
+	short netid_len = strlen(netid) + 1;
+	unsigned char param[netid_len + 4];
+	param[0] = 0x0;
+	param[1] = 0x10;
+	param[2] = netid_len >> 8;
+	param[3] = netid_len & 0xff;
+	memcpy(param + 4, netid, netid_len);
 	return fill_normal_C_req(buf, 0x20, 0x20, sizeof(param), param);
 }
 
