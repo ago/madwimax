@@ -388,7 +388,7 @@ static int read_tap()
 
 static int process_events_once(int timeout)
 {
-	struct timeval tv;
+	struct timeval tv = {0, 0};
 	int r;
 	int libusb_delay;
 	int delay;
@@ -402,7 +402,7 @@ static int process_events_once(int timeout)
 	}
 
 	delay = libusb_delay = tv.tv_sec * 1000 + tv.tv_usec;
-	if (delay == 0 || delay > timeout)
+	if (delay <= 0 || delay > timeout)
 	{
 		delay = timeout;
 	}
