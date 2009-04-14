@@ -252,7 +252,7 @@ static int raise_event(char *event)
 		char *env[1] = {NULL};
 		/* run the program */
 		execve(args[0], args, env);
-		return -1;
+		exit(1);
 	}
 }
 
