@@ -125,6 +125,7 @@ AC_DEFINE_UNQUOTED(SBINDIR, "${conftemp}",
 			[Default sbin path])
 
 # expand ${sysconfdir} and write it out
+sysconfdir="${sysconfdir}"/madwimax
 conftemp="${sysconfdir}"
 eval conftemp=\"${conftemp}\"
 eval conftemp=\"${conftemp}\"
