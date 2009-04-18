@@ -10,4 +10,4 @@ madwimax.8.xml: $(srcdir)/madwimax.8.txt
 	asciidoc -b docbook -d manpage -o $@ $<
 
 madwimax.8: madwimax.8.xml
-	docbook2x-man --to-stdout $< > $@
+	docbook2x-man $<
