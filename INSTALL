@@ -8,7 +8,8 @@ Prerequisites
 
  * Linux kernel with TUN/TAP support
  * libusb-1.0 (http://libusb.wiki.sourceforge.net/Libusb1.0)
- * (optionally) udev
+ * asciidoc and docbook2x (for man pages)
+ * udev (optionally)
 
 Compiling
 ---------

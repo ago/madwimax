@@ -1,7 +1,7 @@
 Driver:
- * Add man page and docs
  * Persistent network interface naming
  * Use unix sockets to communicate with frontends
+ * (?) Add docs
  * (?) Add a target to build hald-addon and write hal rules
 Frontends:
  1. Dump current link status (perfect for use with conky)
