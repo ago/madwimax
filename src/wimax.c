@@ -54,8 +54,8 @@ static int match_method = MATCH_BY_LIST;
 
 /* for matching by list... */
 typedef struct usb_device_id_t {
-	int vendorID;
-	int productID;
+	unsigned short vendorID;
+	unsigned short productID;
 } usb_device_id_t;
 
 /* list of all known devices */
@@ -69,8 +69,8 @@ static usb_device_id_t wimax_dev_ids[] = {
 /* for other methods of matching... */
 static union {
 	struct {
-		unsigned int vid;
-		unsigned int pid;
+		unsigned short vid;
+		unsigned short pid;
 	};
 	struct {
 		unsigned int bus;
@@ -131,16 +131,19 @@ static struct libusb_device_handle* find_wimax_device(void)
 	while (!found && (dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
 		unsigned int j = 0;
+		unsigned short dev_vid, dev_pid;
 
 		r = libusb_get_device_descriptor(dev, &desc);
 		if (r < 0) {
 			continue;
 		}
-		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), desc.idVendor, desc.idProduct);
+		dev_vid = libusb_le16_to_cpu(desc.idVendor);
+		dev_pid = libusb_le16_to_cpu(desc.idProduct);
+		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), dev_vid, dev_pid);
 		switch (match_method) {
 			case MATCH_BY_LIST: {
 				for (j = 0; j < sizeof(wimax_dev_ids) / sizeof(usb_device_id_t); j++) {
-					if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
+					if (dev_vid == wimax_dev_ids[j].vendorID && dev_pid == wimax_dev_ids[j].productID) {
 						found = dev;
 						break;
 					}
@@ -148,7 +151,7 @@ static struct libusb_device_handle* find_wimax_device(void)
 				break;
 			}
 			case MATCH_BY_VID_PID: {
-				if (desc.idVendor == match_params.vid && desc.idProduct == match_params.pid) {
+				if (dev_vid == match_params.vid && dev_pid == match_params.pid) {
 					found = dev;
 				}
 				break;
