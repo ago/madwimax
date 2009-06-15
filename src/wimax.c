@@ -43,6 +43,7 @@
 static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
+static char ssid[32] = "@yota.ru";
 
 static FILE *logfile = NULL;
 
@@ -576,7 +577,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN, "@yota.ru");
+	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN, ssid);
 	set_data(req_data, len);
 
 	return 0;
@@ -650,6 +651,8 @@ void usage(const char *progname)
 	printf("      --device=vid:pid        specify the USB device by VID:PID\n");
 	printf("      --exact-device=bus/dev  specify the exact USB bus/device (use with care!)\n");
 	printf("  -V, --version               print the version number\n");
+	printf("      --ssid                  specify SSID, a friendly name that identifies a\n");
+	printf("                              particular 802.16e wireless network\n");
 	printf("  -h, --help                  display this help\n");
 }
 
@@ -677,6 +680,7 @@ static void parse_args(int argc, char **argv)
 			{"device",		required_argument,	0, 1},
 			{"exact-device",	required_argument,	0, 2},
 			{"version",		no_argument,		0, 'V'},
+			{"ssid",		required_argument,	0, 3},
 			{"help",		no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
@@ -772,6 +776,10 @@ static void parse_args(int argc, char **argv)
 
 					fprintf(stderr, "Error parsing BUS/DEV combination.\n");
 					exit(1);
+					break;
+				}
+			case 3: {
+					strncpy(ssid,optarg,32);
 					break;
 				}
 			case '?': {

@@ -58,6 +58,10 @@ OPTIONS
 
 *-v, --verbose*::
     Increase the log level.
+    
+*--ssid*='SSID'::
+    Specify service set identifier, or SSID, which is a friendly name
+    that identifies a particular 802.16e wireless network.
 
 
 EXIT STATUS
