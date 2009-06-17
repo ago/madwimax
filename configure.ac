@@ -27,6 +27,7 @@ fi
 
 PIDPATH="/var/run"
 script="generic"
+manpages="yes"
 
 # Checks for programs.
 AC_PROG_CC
@@ -49,8 +50,14 @@ AC_FUNC_VPRINTF
 AC_FUNC_WAIT3
 AC_CHECK_FUNCS([gettimeofday memset socket strchr strerror strtoul])
 
+# Check for pkg-config
+PKG_PROG_PKG_CONFIG
+if test -z "${PKG_CONFIG}"; then
+	AC_MSG_ERROR(["pkg-config not found"])
+fi
+
 # Check for libusb-1.0
-PKG_CHECK_MODULES([libusb1], libusb-1.0,,AC_MSG_ERROR([libusb-1.0 not found$(test ! "${PKG_CONFIG}" && (echo; echo Try to install pkg-config first.))]))
+PKG_CHECK_MODULES([libusb1], libusb-1.0,,AC_MSG_ERROR([libusb-1.0 not found]))
 
 CFLAGS="$CFLAGS $libusb1_CFLAGS"
 
@@ -60,6 +67,7 @@ then
 	CFLAGS="${CFLAGS} -Wall -Wsign-compare"
 fi  
 
+# Check whether to install udev rules
 AC_MSG_CHECKING(whether to install udev rules)
 AC_ARG_WITH(udev-dir,
 	AC_HELP_STRING([--with-udev-dir=PATH], [where to install udev rules (/etc/udev)]),
@@ -88,6 +96,7 @@ else
 fi
 AM_CONDITIONAL(WITH_UDEV, test -n "${udevdir}")
 
+# Check which event script to use
 AC_MSG_CHECKING(which event script to use)
 AC_ARG_WITH(script,
 	AC_HELP_STRING([--with-script=NAME], [which event script to use (generic)]),
@@ -114,7 +123,56 @@ else
 fi
 AM_CONDITIONAL(WITH_SCRIPT, test -n "${script}")
 
-# expand ${sbindir} and write it out
+# Check whether to generate man pages
+AC_MSG_CHECKING(whether to generate man pages)
+AC_ARG_WITH(man-pages,
+	    AC_HELP_STRING([--without-man-pages], [don't generate man pages (default is to generate them)]),
+	[
+		case "${withval}" in
+			yes)
+			;;
+			auto)
+			;;
+			no)
+				manpages="no"
+			;;
+			*)
+			;;
+		esac
+	])
+AC_MSG_RESULT(${manpages})
+if test "${manpages}" = "yes"; then
+	# Check for asciidoc
+	AC_MSG_CHECKING(for asciidoc)
+	if asciidoc --help >/dev/null 2>&1; then
+		AC_MSG_RESULT(yes)
+	else
+		AC_MSG_RESULT(no)
+		AC_MSG_ERROR(["asciidoc not found"])
+	fi
+	
+	# Check for docbook2x-man
+	db2xman=""
+	AC_MSG_CHECKING(for docbook2x-man)
+	for name in docbook2x-man db2x_docbook2man; do
+		if "$name" --help >/dev/null 2>&1; then
+			db2xman="$name"
+			break;
+		fi
+	done
+	if test -n "${db2xman}"; then
+		AC_MSG_RESULT(${db2xman})
+	else
+		AC_MSG_RESULT(no)
+		AC_MSG_ERROR(["docbook2x-man not found"])
+	fi
+
+	AC_SUBST(db2xman)
+fi
+AM_CONDITIONAL(WITH_MAN_PAGES, test "${manpages}" = "yes")
+
+
+# Expand ${sbindir} and write it out
 conftemp="${sbindir}"
 eval conftemp=\"${conftemp}\"
 eval conftemp=\"${conftemp}\"
@@ -138,7 +196,6 @@ AC_SUBST(SBINDIR)
 AC_SUBST(SYSCONFDIR)
 AC_SUBST(udevdir)
 AC_SUBST(script)
-
 
 
 AC_CONFIG_FILES([

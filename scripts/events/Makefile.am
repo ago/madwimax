@@ -8,7 +8,7 @@ event.sh: event.sh.$(script)
 
 MOSTLYCLEANFILES = event.sh
 DISTCLEANFILES = event.sh.$(script)
-EXTRA_DIST = event.sh.generic.in event.sh.wl500g.in
 
 endif
 
+EXTRA_DIST = event.sh.generic.in event.sh.wl500g.in
