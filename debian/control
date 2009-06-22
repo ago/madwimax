@@ -1,0 +1,24 @@
+Source: madwimax
+Section: admin
+Priority: optional
+Maintainer: Alexander Gordeev <lasaine@lvk.cs.msu.su>
+Build-Depends: debhelper (>= 7), autotools-dev, libusb-1.0-0-dev, pkg-config, asciidoc, docbook-xml, docbook2x
+Standards-Version: 3.8.1
+Homepage: http://code.google.com/p/madwimax/
+Vcs-Browser: http://code.google.com/p/madwimax/source/browse/
+Vcs-Svn: http://madwimax.googlecode.com/svn/trunk/
+
+Package: madwimax
+Architecture: any
+Depends: ${shlibs:Depends}
+Recommends: dhcp3-client | dhcp-client
+Description: user-space driver for mWiMAX equipment based on Samsung CMC-730
+ madwimax is an experimental reverse-engineered Linux driver for
+ mobile WiMAX (802.16e) devices based on Samsung CMC-730 chip. These
+ devices are currently supported:
+  * Samsung SWC-U200
+  * Samsung SWC-E100
+  * Samsung SWM-S10R (it is built in Samsung NC-10 netbook)
+ .
+ This package contains the user-space standalone implementation of the
+ driver. It requires Universal TUN/TAP support in your kernel.
