@@ -30,7 +30,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #include "config.h"
 #include "logging.h"
