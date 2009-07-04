@@ -645,16 +645,16 @@ void usage(const char *progname)
 	printf("  -v, --verbose               increase the log level\n");
 	printf("  -q, --quiet                 switch off logging\n");
 	printf("  -d, --daemonize             daemonize after startup\n");
-	printf("  -l, --log-file=file         write log to the specified file instead of the\n");
-	printf("                              other methods\n");
+	printf("  -l, --log-file=FILE         write log to the FILE instead of the other\n");
+	printf("                              methods\n");
 	printf("  -o, --diode-off             turn off the diode (diode is on by default)\n");
 	printf("  -f, --detach-dvd            detach pseudo-DVD kernel driver on startup\n");
-	printf("      --device=vid:pid        specify the USB device by VID:PID\n");
-	printf("      --exact-device=bus/dev  specify the exact USB bus/device (use with care!)\n");
+	printf("      --device=VID:PID        specify the USB device by VID:PID\n");
+	printf("      --exact-device=BUS/DEV  specify the exact USB bus/device (use with care!)\n");
 	printf("  -V, --version               print the version number\n");
 	printf("      --ssid                  specify SSID, a friendly name that identifies a\n");
 	printf("                              particular 802.16e wireless network\n");
-	printf("  -e, --event-script          specify pathname of the event script\n");
+	printf("  -e, --event-script=FILE     specify path to the event script\n");
 	printf("  -h, --help                  display this help\n");
 }
 

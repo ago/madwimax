@@ -35,6 +35,9 @@ OPTIONS
 *--device*='VID:PID'::
     Specify the USB device by 'VID:PID' combination.
 
+*-e* 'FILE', *--event-script*='FILE'::
+    Specify path to the event script.
+
 *--exact-device*='BUS/DEVICE'::
     Specify the exact USB 'BUS/DEVICE' (use with care!).
 
