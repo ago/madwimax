@@ -36,41 +36,50 @@
 int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int len);
 
 
+#define HEADER_LENGTH_LOWLEVEL	4
+#define HEADER_LENGTH		6
+
 /* 57 45 requests */
 
-int fill_protocol_info_req(unsigned char *buf, int len, unsigned char flags);
+int fill_protocol_info_req(unsigned char *buf, unsigned char flags);
+
+/* 57 50 requests */
+
+int fill_mac_lowlevel_req(unsigned char *buf);
 
 
 /* 57 43 requests */
 
-int fill_string_info_req(unsigned char *buf, int len);
+int fill_init_cmd(unsigned char *buf);
 
-int fill_diode_control_cmd(unsigned char *buf, int len, int turn_on);
+/* 57 43 config requests */
 
-int fill_mac_req(unsigned char *buf, int len);
+int fill_string_info_req(unsigned char *buf);
 
-int fill_auth_policy_req(unsigned char *buf, int len);
+int fill_diode_control_cmd(unsigned char *buf, int turn_on);
 
-int fill_auth_method_req(unsigned char *buf, int len);
+int fill_mac_req(unsigned char *buf);
 
-int fill_auth_set_cmd(unsigned char *buf, int len, char *netid);
+int fill_auth_policy_req(unsigned char *buf);
 
-int fill_find_network_req(unsigned char *buf, int len, unsigned short level);
+int fill_auth_method_req(unsigned char *buf);
 
-int fill_connection_params1_req(unsigned char *buf, int len);
+int fill_auth_set_cmd(unsigned char *buf, char *netid);
 
-int fill_connection_params2_req(unsigned char *buf, int len);
+int fill_find_network_req(unsigned char *buf, unsigned short level);
 
-int fill_state_req(unsigned char *buf, int len);
+int fill_connection_params_req(unsigned char *buf);
 
-int fill_network_list_req(unsigned char *buf, int len);
+int fill_state_req(unsigned char *buf);
+
+int fill_network_list_req(unsigned char *buf);
 
 
 /* 57 44 requests */
 
-int get_D_header_len();
+int get_header_len();
 
-int fill_outgoing_packet_header(unsigned char *buf, int len, int body_len);
+int fill_data_packet_header(unsigned char *buf, int body_len);
 
 #endif // _PROTOCOL_H
 

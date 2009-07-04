@@ -24,7 +24,7 @@
 #include "logging.h"
 #include "protocol.h"
 
-static int process_normal_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
+static int process_normal_config_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 	short type_a = (buf[0x14] << 8) + buf[0x15];
 	short type_b = (buf[0x16] << 8) + buf[0x17];
@@ -92,13 +92,13 @@ static int process_normal_C_response(struct wimax_dev_status *dev, const unsigne
 	return 0;
 }
 
-static int process_debug_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
+static int process_debug_config_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 	dev->info_updated |= WDS_OTHER;
 	return 0;
 }
 
-static int process_C_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
+static int process_config_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 	if (buf[0x12] != 0x15) {
 		wmlog_msg(1, "bad format");
@@ -107,9 +107,9 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 
 	switch (buf[0x13]) {
 		case 0x00:
-			return process_normal_C_response(dev, buf, len);
+			return process_normal_config_response(dev, buf, len);
 		case 0x02:
-			return process_debug_C_response(dev, buf, len);
+			return process_debug_config_response(dev, buf, len);
 		case 0x04:
 			break;
 		default:
@@ -122,7 +122,7 @@ static int process_C_response(struct wimax_dev_status *dev, const unsigned char 
 	return 0;
 }
 
-static int process_D_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
+static int process_data_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
 	write_netif(buf + 0x06, len - 0x06);
 	return 0;
@@ -173,9 +173,9 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 
 	switch (buf[1]) {
 		case 0x43:
-			return process_C_response(dev, buf, len);
+			return process_config_response(dev, buf, len);
 		case 0x44:
-			return process_D_response(dev, buf, len);
+			return process_data_response(dev, buf, len);
 		case 0x45:
 			return process_E_response(dev, buf, len);
 		case 0x50:
@@ -187,75 +187,100 @@ int process_response(struct wimax_dev_status *dev, const unsigned char *buf, int
 }
 
 
-int fill_protocol_info_req(unsigned char *buf, int len, unsigned char flags)
+static inline void fill_outgoing_packet_header(unsigned char *buf, unsigned char type, int body_len)
 {
 	buf[0x00] = 0x57;
-	buf[0x01] = 0x45;
-	buf[0x02] = 0x04;
-	buf[0x03] = 0x00;
-	buf[0x04] = 0x00;
-	buf[0x05] = 0x02;
-	buf[0x06] = 0x00;
-	buf[0x07] = flags;
-	return 8;
+	buf[0x01] = type;
+	buf[0x02] = body_len & 0xff;
+	buf[0x03] = (body_len >> 8) & 0xff;
 }
 
-
-static void fill_C_req(unsigned char *buf, int len)
+int fill_protocol_info_req(unsigned char *buf, unsigned char flags)
 {
-	len -= 6;
-	buf[0x00] = 0x57;
-	buf[0x01] = 0x43;
-	buf[0x02] = len & 0xff;
-	buf[0x03] = (len >> 8) & 0xff;
-	memset(buf + 6, 0, 12);
+	fill_outgoing_packet_header(buf, 0x45, 4);
+	buf += HEADER_LENGTH_LOWLEVEL;
+	buf[0x00] = 0x00;
+	buf[0x01] = 0x02;
+	buf[0x02] = 0x00;
+	buf[0x03] = flags;
+	return HEADER_LENGTH_LOWLEVEL + 4;
 }
 
-static int fill_normal_C_req(unsigned char *buf, unsigned short type_a, unsigned short type_b, unsigned short param_len, unsigned char *param)
+int fill_mac_lowlevel_req(unsigned char *buf)
 {
-	int len = 0x1a + param_len;
-	fill_C_req(buf, len);
+	fill_outgoing_packet_header(buf, 0x50, 0x14);
+	buf += HEADER_LENGTH_LOWLEVEL;
+	memset(buf, 0, 0x14);
+	buf[0x0c] = 0x15;
+	buf[0x0d] = 0x0a;
+	return HEADER_LENGTH_LOWLEVEL + 0x14;
+}
+
+static inline void fill_config_req(unsigned char *buf, int body_len)
+{
+	fill_outgoing_packet_header(buf, 0x43, body_len);
+	memset(buf + HEADER_LENGTH, 0, 12);
+}
+
+static int fill_normal_config_req(unsigned char *buf, unsigned short type_a, unsigned short type_b, unsigned short param_len, unsigned char *param)
+{
+	int body_len = 0x14 + param_len;
+	fill_config_req(buf, body_len);
 	buf[0x04] = 0x15;
 	buf[0x05] = 0x00;
-	buf[0x12] = 0x15;
-	buf[0x13] = 0x00;
-	buf[0x14] = type_a >> 8;
-	buf[0x15] = type_a & 0xff;
-	buf[0x16] = type_b >> 8;
-	buf[0x17] = type_b & 0xff;
-	buf[0x18] = param_len >> 8;
-	buf[0x19] = param_len & 0xff;
-	memcpy(buf + 0x1a, param, param_len);
-	return len;
+	buf += HEADER_LENGTH;
+	buf[0x0c] = 0x15;
+	buf[0x0d] = 0x00;
+	buf[0x0e] = type_a >> 8;
+	buf[0x0f] = type_a & 0xff;
+	buf[0x10] = type_b >> 8;
+	buf[0x11] = type_b & 0xff;
+	buf[0x12] = param_len >> 8;
+	buf[0x13] = param_len & 0xff;
+	memcpy(buf + 0x14, param, param_len);
+	return HEADER_LENGTH + body_len;
 }
 
-int fill_string_info_req(unsigned char *buf, int len)
+int fill_init_cmd(unsigned char *buf)
 {
-	return fill_normal_C_req(buf, 0x8, 0x1, 0x0, NULL);
+	fill_config_req(buf, 0x12);
+	buf[0x04] = 0x15;
+	buf[0x05] = 0x04;
+	buf += HEADER_LENGTH;
+	buf[0x0c] = 0x15;
+	buf[0x0d] = 0x04;
+	buf[0x0e] = 0x50;
+	buf[0x0f] = 0x04;
+	return HEADER_LENGTH + 0x12;
 }
 
-int fill_diode_control_cmd(unsigned char *buf, int len, int turn_on)
+int fill_string_info_req(unsigned char *buf)
+{
+	return fill_normal_config_req(buf, 0x8, 0x1, 0x0, NULL);
+}
+
+int fill_diode_control_cmd(unsigned char *buf, int turn_on)
 {
 	unsigned char param[0x2] = {0x0, turn_on ? 0x1 : 0x0};
-	return fill_normal_C_req(buf, 0x30, 0x1, sizeof(param), param);
+	return fill_normal_config_req(buf, 0x30, 0x1, sizeof(param), param);
 }
 
-int fill_mac_req(unsigned char *buf, int len)
+int fill_mac_req(unsigned char *buf)
 {
-	return fill_normal_C_req(buf, 0x3, 0x1, 0x0, NULL);
+	return fill_normal_config_req(buf, 0x3, 0x1, 0x0, NULL);
 }
 
-int fill_auth_policy_req(unsigned char *buf, int len)
+int fill_auth_policy_req(unsigned char *buf)
 {
-	return fill_normal_C_req(buf, 0x20, 0x8, 0x0, NULL);
+	return fill_normal_config_req(buf, 0x20, 0x8, 0x0, NULL);
 }
 
-int fill_auth_method_req(unsigned char *buf, int len)
+int fill_auth_method_req(unsigned char *buf)
 {
-	return fill_normal_C_req(buf, 0x20, 0xc, 0x0, NULL);
+	return fill_normal_config_req(buf, 0x20, 0xc, 0x0, NULL);
 }
 
-int fill_auth_set_cmd(unsigned char *buf, int len, char *netid)
+int fill_auth_set_cmd(unsigned char *buf, char *netid)
 {
 	short netid_len = strlen(netid) + 1;
 	unsigned char param[netid_len + 4];
@@ -264,50 +289,41 @@ int fill_auth_set_cmd(unsigned char *buf, int len, char *netid)
 	param[2] = netid_len >> 8;
 	param[3] = netid_len & 0xff;
 	memcpy(param + 4, netid, netid_len);
-	return fill_normal_C_req(buf, 0x20, 0x20, sizeof(param), param);
+	return fill_normal_config_req(buf, 0x20, 0x20, sizeof(param), param);
 }
 
-int fill_find_network_req(unsigned char *buf, int len, unsigned short level)
+int fill_find_network_req(unsigned char *buf, unsigned short level)
 {
 	unsigned char param[0x2] = {level >> 8, level & 0xff};
-	return fill_normal_C_req(buf, 0x1, 0x1, sizeof(param), param);
+	return fill_normal_config_req(buf, 0x1, 0x1, sizeof(param), param);
 }
 
-int fill_connection_params1_req(unsigned char *buf, int len)
-{
-	unsigned char param[0x2] = {0xff, 0xff};
-	return fill_normal_C_req(buf, 0x1, 0x9, sizeof(param), param);
-}
-
-int fill_connection_params2_req(unsigned char *buf, int len)
+int fill_connection_params_req(unsigned char *buf)
 {
 	unsigned char param[0x2] = {0x00, 0x00};
-	return fill_normal_C_req(buf, 0x1, 0x9, sizeof(param), param);
+	return fill_normal_config_req(buf, 0x1, 0x9, sizeof(param), param);
 }
 
-int fill_state_req(unsigned char *buf, int len)
+int fill_state_req(unsigned char *buf)
 {
-	return fill_normal_C_req(buf, 0x1, 0xb, 0x0, NULL);
+	return fill_normal_config_req(buf, 0x1, 0xb, 0x0, NULL);
 }
 
-int fill_network_list_req(unsigned char *buf, int len)
+int fill_network_list_req(unsigned char *buf)
 {
 	unsigned char param[0x2] = {0x00, 0x00};
-	return fill_normal_C_req(buf, 0x24, 0x1, sizeof(param), param);
+	return fill_normal_config_req(buf, 0x24, 0x1, sizeof(param), param);
 }
 
 
-int get_D_header_len()
+int get_header_len()
 {
-	return 6;
+	return HEADER_LENGTH;
 }
 
-int fill_outgoing_packet_header(unsigned char *buf, int len, int body_len)
+int fill_data_packet_header(unsigned char *buf, int body_len)
 {
-	buf[0x00] = 0x57;
-	buf[0x01] = 0x44;
-	buf[0x02] = body_len & 0xff;
-	buf[0x03] = (body_len >> 8) & 0xff;
-	return body_len + 6;
+	fill_outgoing_packet_header(buf, 0x44, body_len);
+	return HEADER_LENGTH + body_len;
 }
 

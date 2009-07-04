@@ -367,7 +367,7 @@ int write_netif(const void *buf, int count)
 static int read_tap()
 {
 	unsigned char buf[MAX_PACKET_LEN];
-	int hlen = get_D_header_len();
+	int hlen = get_header_len();
 	int r;
 	int len;
 
@@ -384,7 +384,7 @@ static int read_tap()
 		return 0;
 	}
 
-	len = fill_outgoing_packet_header(buf, MAX_PACKET_LEN, r);
+	len = fill_data_packet_header(buf, r);
 	wmlog_dumphexasc(4, buf, len, "Outgoing packet:");
 	r = set_data(buf, len);
 
@@ -521,8 +521,6 @@ void cb_remove_pollfd(int fd, void *user_data)
 
 static int init(void)
 {
-	unsigned char data2[] = {0x57, 0x50, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	unsigned char data3[] = {0x57, 0x43, 0x12, 0x00, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0x04, 0x50, 0x04, 0x00, 0x00};
 	unsigned char req_data[MAX_PACKET_LEN];
 	int len;
 	int r;
@@ -532,20 +530,22 @@ static int init(void)
 	wmlog_msg(2, "Continuous async read start...");
 	CHECK_DISCONNECTED(libusb_submit_transfer(req_transfer));
 
-	len = fill_protocol_info_req(req_data, MAX_PACKET_LEN,
+	len = fill_protocol_info_req(req_data,
 			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
 			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_PROTO_FLAGS);
 
-	set_data(data2, sizeof(data2));
+	len = fill_mac_lowlevel_req(req_data);
+	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	set_data(data3, sizeof(data3));
+	len = fill_init_cmd(req_data);
+	set_data(req_data, len);
 
-	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	len = fill_string_info_req(req_data);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
@@ -553,32 +553,32 @@ static int init(void)
 	wmlog_msg(1, "Chip info: %s", wd_status.chip);
 	wmlog_msg(1, "Firmware info: %s", wd_status.firmware);
 
-	len = fill_diode_control_cmd(req_data, MAX_PACKET_LEN, diode_on);
+	len = fill_diode_control_cmd(req_data, diode_on);
 	set_data(req_data, len);
 
-	len = fill_mac_req(req_data, MAX_PACKET_LEN);
+	len = fill_mac_req(req_data);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_MAC);
 
 	wmlog_msg(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
 
-	len = fill_string_info_req(req_data, MAX_PACKET_LEN);
+	len = fill_string_info_req(req_data);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_CHIP | WDS_FIRMWARE);
 
-	len = fill_auth_policy_req(req_data, MAX_PACKET_LEN);
+	len = fill_auth_policy_req(req_data);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_method_req(req_data, MAX_PACKET_LEN);
+	len = fill_auth_method_req(req_data);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_set_cmd(req_data, MAX_PACKET_LEN, ssid);
+	len = fill_auth_set_cmd(req_data, ssid);
 	set_data(req_data, len);
 
 	return 0;
@@ -592,7 +592,7 @@ static int scan_loop(void)
 	while (1)
 	{
 		if (wd_status.link_status == 0) {
-			len = fill_find_network_req(req_data, MAX_PACKET_LEN, 1);
+			len = fill_find_network_req(req_data, 1);
 			set_data(req_data, len);
 
 			process_events_by_mask(5000, WDS_LINK_STATUS);
@@ -603,13 +603,7 @@ static int scan_loop(void)
 				wmlog_msg(2, "Network found.");
 			}
 		} else {
-			//len = fill_connection_params1_req(req_data, MAX_PACKET_LEN);
-			//r = set_data(req_data, len);
-			//if (r < 0) {
-			//	return r;
-			//}
-
-			len = fill_connection_params2_req(req_data, MAX_PACKET_LEN);
+			len = fill_connection_params_req(req_data);
 			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_RSSI | WDS_CINR | WDS_TXPWR | WDS_FREQ | WDS_BSID);
@@ -617,7 +611,7 @@ static int scan_loop(void)
 			wmlog_msg(2, "RSSI: %d   CINR: %f   TX Power: %d   Frequency: %d", wd_status.rssi, wd_status.cinr, wd_status.txpwr, wd_status.freq);
 			wmlog_msg(2, "BSID: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.bsid[0], wd_status.bsid[1], wd_status.bsid[2], wd_status.bsid[3], wd_status.bsid[4], wd_status.bsid[5]);
 
-			len = fill_state_req(req_data, MAX_PACKET_LEN);
+			len = fill_state_req(req_data);
 			set_data(req_data, len);
 
 			process_events_by_mask(500, WDS_STATE);
@@ -626,7 +620,7 @@ static int scan_loop(void)
 
 			if (first_nego_flag) {
 				first_nego_flag = 0;
-				len = fill_find_network_req(req_data, MAX_PACKET_LEN, 2);
+				len = fill_find_network_req(req_data, 2);
 				set_data(req_data, len);
 			}
 
