@@ -43,7 +43,8 @@
 static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
-static char ssid[32] = "@yota.ru";
+static char *ssid = "@yota.ru";
+static char *event_script = SYSCONFDIR "/event.sh";
 
 static FILE *logfile = NULL;
 
@@ -252,7 +253,7 @@ static int raise_event(char *event)
 	} else if (pid > 0) { /* parent */
 		return pid;
 	} else { /* child */
-		char *args[] = {SYSCONFDIR "/event.sh", event, tap_dev, NULL};
+		char *args[] = {event_script, event, tap_dev, NULL};
 		char *env[1] = {NULL};
 		/* run the program */
 		execve(args[0], args, env);
@@ -653,6 +654,7 @@ void usage(const char *progname)
 	printf("  -V, --version               print the version number\n");
 	printf("      --ssid                  specify SSID, a friendly name that identifies a\n");
 	printf("                              particular 802.16e wireless network\n");
+	printf("  -e, --event-script          specify pathname of the event script\n");
 	printf("  -h, --help                  display this help\n");
 }
 
@@ -681,11 +683,12 @@ static void parse_args(int argc, char **argv)
 			{"exact-device",	required_argument,	0, 2},
 			{"version",		no_argument,		0, 'V'},
 			{"ssid",		required_argument,	0, 3},
+			{"event-script",	required_argument,	0, 'e'},
 			{"help",		no_argument,		0, 'h'},
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "vqdl:ofVh", long_options, &option_index);
+		c = getopt_long(argc, argv, "vqdl:ofVe:h", long_options, &option_index);
 
 		/* detect the end of the options. */
 		if (c == -1)
@@ -779,7 +782,11 @@ static void parse_args(int argc, char **argv)
 					break;
 				}
 			case 3: {
-					strncpy(ssid,optarg,32);
+					ssid = optarg;
+					break;
+				}
+			case 'e': {
+					event_script = optarg;
 					break;
 				}
 			case '?': {
