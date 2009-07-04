@@ -1,3 +1,107 @@
+2009-07-04 03:00  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/protocol.c, src/protocol.h, src/wimax.c: Major protocol code
+	  rewrite and generalization.
+
+2009-07-04 00:28  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* man/madwimax.8.txt, src/wimax.c: Update help and man according to
+	  recent changes.
+
+2009-07-04 00:14  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: Add an option for event script path (based on
+	  theMIROn's patch). Handle
+	  ssid better as well. (Closes issue #21)
+
+2009-07-03 17:46  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: Fix libusb.h include (based on theMIROn's patch).
+
+2009-06-17 14:46  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* configure.ac, man/Makefile.am, scripts/events/Makefile.am: Check
+	  for asciidoc and docbook2x-man in configure for proper man page
+	  generation. Also one can now completely disable man pages using
+	  --without-man-pages configure switch. (Closes issue #11.)
+
+2009-06-15 12:09  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* man/madwimax.8.txt, src/wimax.c: Add 'ssid' option to support
+	  non-Yota networks without recompilation (based on the patch from
+	  Alexei Tarnakin).
+
+2009-05-08 18:14  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: Fix VID:PID endianness problem (issue 15).
+
+2009-04-19 17:51  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* INSTALL, README, TODO, man/madwimax.8.txt: Fix some documentation
+	  issues.
+
+2009-04-18 21:57  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* man/Makefile.am: Don't output man page to stdout because this
+	  will make an empty file if docbook2x is missing.
+
+2009-04-17 20:21  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* man/Makefile.am: Remove generated man pages on clean.
+
+2009-04-17 08:38  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* man/Makefile.am: Use docbook2x-man instead of xsltproc for
+	  xml->man conversion.
+
+2009-04-14 21:49  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* configure.ac, src/Makefile.am: Move libusb1_LIBS to the end of
+	  madwimax ld flags.
+
+2009-04-14 21:45  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* configure.ac, scripts/events/Makefile.am: Change sysconfdir
+	  globally.
+
+2009-04-14 13:53  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: End child process if event script cannot be launched
+	  (thanks Alexander Monakov for pointing this out).
+
+2009-04-13 02:17  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: Initialize timeval structure to prevent negative
+	  delay.
+
+2009-04-13 00:37  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/protocol.c, src/protocol.h, src/wimax.c: Pass network id to
+	  fill_auth_set_cmd instead of using a hard-coded value.
+
+2009-04-12 07:22  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/protocol.c: One more update.
+
+2009-04-12 07:19  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* README, src/logging.c, src/logging.h, src/protocol.h,
+	  src/tap_dev.c, src/tap_dev.h, src/wimax.c, src/wimax.h: Update
+	  project descriptions.
+
+2009-04-11 23:32  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* scripts/events/Makefile.am: Install to etc/madwimax by default,
+	  instead of plain etc.
+
+2009-04-11 23:31  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* AUTHORS, ChangeLog: Fix email address.
+
+2009-04-11 23:29  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* src/wimax.c: Fix embedded help.
+
 2009-04-11 23:27  Alexander Gordeev <lasaine@lvk.cs.msu.su>
 
 	* Makefile.am, configure.ac, man, man/Makefile.am,

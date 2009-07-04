@@ -1,4 +1,4 @@
-MadWimax: INSTALL
+madWiMAX: INSTALL
 
 These are the essential steps for compiling and installing this
 software.
@@ -14,13 +14,13 @@ Prerequisites
 Compiling
 ---------
 
+If you are compiling from SCM you have to run
+   autoreconf --install
+first to create the 'configure' script.
+
 To compile the software run:
    ./configure <options>
    make
-
-If you are compiling from subversion you have to run
-   autoreconf --install
-first to create the 'configure' script.
 
 You can get the list of configure options by running
    ./configure --help
@@ -42,8 +42,8 @@ by supplying --without-udev option to the 'configure' script.
 Event scripts
 -------------
 
-MadWimax uses user-supplied scripts to configure network. For example, to
-run DHCP client and configure iptables rules. MadWimax comes with several
+madWiMAX uses user-supplied scripts to configure network. For example, to
+run DHCP client and configure iptables rules. madWiMAX comes with several
 scripts, optimized for some environments. They live in scripts/events. To
 select script event.sh.<name>.in to install pass --with-script=<name>
 option to 'configure' script. If you don't want to install any of the

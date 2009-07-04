@@ -2,7 +2,7 @@
 BUILT_SOURCES = madwimax_version.h
 CLEANFILES = madwimax_version.h
 
-# magic to include SVN revision number in MadWimax version string
+# magic to include SVN revision number in madWiMAX version string
 
 madwimax_version.h: FORCE
 	@SVNREV=`LANG=C svnversion -n $(top_srcdir) 2>/dev/null` \

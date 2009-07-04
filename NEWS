@@ -1,3 +1,17 @@
+Version 0.1.1
+  - Added support for SWC-E100.
+  - Added support for Mezon (www.mezon.lt) version of SWC-U200. You
+    have to select the SSID from the command line at the moment, but
+    this will be handled somewhat better in the future.
+  - Updated udev rules to start madwimax by default when device is
+    plugged.
+  - Added madwimax manual page.
+  - Change the default installation path of madwimax config files from
+    $prefix/etc to $prefix/etc/madwimax.
+  - Added several new options.
+  - Lots of bugs fixed.
+  - Cleaned up some pieces of code.
+
 Version 0.1.0
   - Added a table of supported devices (fixes inability to connect to
     the devices with BL22 firmware out of the box).

@@ -3,8 +3,8 @@
 # +------------------------------------------------------------------+
 
 # madwimax version number is defined here and *only* here
-AC_INIT(madwimax, 0.1.0, [http://code.google.com/p/madwimax/issues/list])
-echo "MadWimax version ${PACKAGE_VERSION}"
+AC_INIT(madwimax, 0.1.1, [http://code.google.com/p/madwimax/issues/list])
+echo "madWiMAX version ${PACKAGE_VERSION}"
 AC_CANONICAL_SYSTEM
 AC_CONFIG_SRCDIR([src/wimax.c])
 AC_CONFIG_HEADERS([include/config.h])
