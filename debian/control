@@ -5,8 +5,8 @@ Maintainer: Alexander Gordeev <lasaine@lvk.cs.msu.su>
 Build-Depends: debhelper (>= 7), autotools-dev, libusb-1.0-0-dev, pkg-config, asciidoc, docbook-xml, docbook2x
 Standards-Version: 3.8.1
 Homepage: http://code.google.com/p/madwimax/
-Vcs-Browser: http://code.google.com/p/madwimax/source/browse/
-Vcs-Svn: http://madwimax.googlecode.com/svn/trunk/
+Vcs-Browser: http://github.com/ago/madwimax
+Vcs-Git: git://github.com/ago/madwimax.git
 
 Package: madwimax
 Architecture: any
