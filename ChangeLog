@@ -1,3 +1,20 @@
+2009-07-08 11:13  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* scripts/udev/z60_madwimax.rules.in: z60_madwimax.rules.in: run
+	  with the default log level instead of quiet.
+	  (Closes issue #24)
+
+2009-07-08 11:11  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* scripts/udev/z60_madwimax.rules.in: z60_madwimax.rules.in: start
+	  madwimax only when the actual device node
+	  is ready. (Closes issue #22)
+
+2009-07-04 03:46  Alexander Gordeev <lasaine@lvk.cs.msu.su>
+
+	* ChangeLog, INSTALL, NEWS, README, TODO, configure.ac,
+	  include/Makefile.am: Bump version to 0.1.1. Update docs.
+
 2009-07-04 03:00  Alexander Gordeev <lasaine@lvk.cs.msu.su>
 
 	* src/protocol.c, src/protocol.h, src/wimax.c: Major protocol code
