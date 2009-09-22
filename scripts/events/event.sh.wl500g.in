@@ -1,5 +1,8 @@
 #!/bin/sh
 # Usage: event.sh <event> <if-name>
+#
+# A helper script for madwimax on popular wireless routers.
+# Copyright (C) 2008-2009 Alexander Gordeev <lasaine@lvk.cs.msu.su>
 
 case "$1" in
 if-create)
