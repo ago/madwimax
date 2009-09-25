@@ -28,10 +28,20 @@
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+
+#include "config.h"
+
+#ifdef TARGET_LINUX
 #include <linux/if.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/if_tun.h>
+#endif
+
+#ifdef TARGET_DARWIN
+#include <net/if.h>
+#include <net/if_arp.h>
+#endif
 
 #include "wimax.h"
 
@@ -69,6 +79,7 @@ static int tun_open_common0(char *dev, int istun)
 	return -1;
 }
 
+#ifdef TARGET_LINUX
 #ifndef OTUNSETNOCSUM
 /* pre 2.4.6 compatibility */
 #define OTUNSETNOCSUM	(('T'<< 8) | 200)
@@ -77,12 +88,15 @@ static int tun_open_common0(char *dev, int istun)
 #define OTUNSETPERSIST	(('T'<< 8) | 203)
 #define OTUNSETOWNER	(('T'<< 8) | 204)
 #endif
+#endif
 
 static int tun_open_common(char *dev, int istun)
 {
 	struct ifreq ifr;
 	int fd;
-
+#ifdef TARGET_DARWIN
+	return tun_open_common0(dev, istun);
+#else
 	if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
 		return tun_open_common0(dev, istun);
 
@@ -106,6 +120,7 @@ static int tun_open_common(char *dev, int istun)
 failed:
 	close(fd);
 	return -1;
+#endif
 }
 
 
@@ -129,6 +144,7 @@ static char *safe_strncpy(char *dst, const char *src, int size)
 /* Set interface hw adress */
 int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 {
+#ifdef TARGET_LINUX
 	struct ifreq ifr;
 
 	fd = socket(PF_INET, SOCK_DGRAM, 0);
@@ -145,6 +161,25 @@ int tap_set_hwaddr(int fd, const char *dev, unsigned char *hwaddr)
 	}
 
 	close(fd);
+#elif defined(TARGET_DARWIN)
+	int stat;
+	int pid = fork();
+
+	if(pid < 0) { /* error */
+                return -1;
+        } else if (pid > 0) { /* parent */
+                wait(&stat);
+        } else { /* child */
+		char macstring[18];
+		snprintf(macstring, 18, "%02x:%02x:%02x:%02x:%02x:%02x", hwaddr[0], hwaddr[1], hwaddr[2], hwaddr[3], hwaddr[4], hwaddr[5]);
+                char *args[] = {"/sbin/ifconfig", dev, "lladdr", macstring, NULL};
+                char *env[1] = {NULL};
+                /* run the program */
+                if(execve(args[0], args, env) < 0)
+		    perror("Running ifconfig failed:");
+                exit(1);
+        }
+#endif
 	return 0;
 }
 

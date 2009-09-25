@@ -175,6 +175,17 @@ if test "${manpages}" = "yes"; then
 fi
 AM_CONDITIONAL(WITH_MAN_PAGES, test "${manpages}" = "yes")
 
+# Check the platform we're building on
+case "$target" in
+*linux*)
+        AC_DEFINE(TARGET_LINUX, 1, [Are we running on Linux?])
+        ;;
+*darwin*)
+        dnl some Mac OS X tendering (we use vararg macros...)
+        AC_DEFINE(TARGET_DARWIN, 1, [Are we running on Mac OS X?])
+        ;;
+esac
+
 
 # Expand ${sbindir} and write it out
 conftemp="${sbindir}"

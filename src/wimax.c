@@ -103,7 +103,7 @@ static int kernel_driver_active = 0;
 static unsigned char read_buffer[MAX_PACKET_LEN];
 
 static int tap_fd = -1;
-static char tap_dev[20] = "wimax%d";
+static char tap_dev[20] = "tap0";
 static int tap_if_up = 0;
 
 static nfds_t nfds;
@@ -264,6 +264,7 @@ static int raise_event(char *event)
 /* brings interface up and runs a user-supplied script */
 static int if_create()
 {
+	int stat;
 	tap_fd = tap_open(tap_dev);
 	if (tap_fd < 0) {
 		wmlog_msg(0, "failed to allocate tap interface");
@@ -278,6 +279,9 @@ static int if_create()
 	wmlog_msg(0, "Allocated tap interface: %s", tap_dev);
 	wmlog_msg(2, "Starting if-create script...");
 	raise_event("if-create");
+#ifdef TARGET_DARWIN
+	wait(&stat);
+#endif
 	return 0;
 }
 
@@ -397,8 +401,10 @@ static int process_events_once(int timeout)
 	int r;
 	int libusb_delay;
 	int delay;
+	int max_fd = -1;
 	unsigned int i;
 	char process_libusb = 0;
+	fd_set set;
 
 	r = libusb_get_next_timeout(ctx, &tv);
 	if (r == 1 && tv.tv_sec == 0 && tv.tv_usec == 0)
@@ -412,20 +418,26 @@ static int process_events_once(int timeout)
 		delay = timeout;
 	}
 
-	CHECK_NEGATIVE(poll(fds, nfds, delay));
+	for (i = 0; i < nfds; ++i)
+	{
+		if (fds[i].fd > max_fd)
+			max_fd = fds[i].fd;
+		FD_SET(fds[i].fd, &set);
+	}
 
+	CHECK_NEGATIVE(select(max_fd + 1, &set, NULL, NULL, &tv));
 	process_libusb = (r == 0 && delay == libusb_delay);
 
 	for (i = 0; i < nfds; ++i)
 	{
 		if (fds[i].fd == tap_fd) {
-			if (fds[i].revents)
-			{
-				CHECK_NEGATIVE(read_tap());
-			}
-			continue;
+			if (FD_ISSET(fds[i].fd, &set))
+			CHECK_NEGATIVE(read_tap());
 		}
-		process_libusb |= fds[i].revents;
+		else
+		{
+			process_libusb |= FD_ISSET(fds[i].fd, &set);
+		}
 	}
 
 	if (process_libusb)
