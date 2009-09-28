@@ -103,7 +103,11 @@ static int kernel_driver_active = 0;
 static unsigned char read_buffer[MAX_PACKET_LEN];
 
 static int tap_fd = -1;
+#ifdef TARGET_DARWIN
 static char tap_dev[20] = "tap0";
+#else
+static char tap_dev[20] = "wimax%d";
+#endif
 static int tap_if_up = 0;
 
 static nfds_t nfds;
