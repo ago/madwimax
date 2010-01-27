@@ -835,7 +835,6 @@ static void sighandler_exit(int signum) {
 static void sighandler_wait_child(int signum) {
 	int status;
 	wait3(&status, WNOHANG, NULL);
-	wmlog_msg(2, "Child exited with status %d", status);
 }
 
 int main(int argc, char **argv)
