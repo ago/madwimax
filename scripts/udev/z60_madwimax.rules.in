@@ -1,11 +1,16 @@
 # udev rules file for madwimax supported devices
-SUBSYSTEM!="usb_device", GOTO="madwimax_rules_end"
 ACTION!="add", GOTO="madwimax_rules_end"
 
+SUBSYSTEM=="usb_device", GOTO="madwimax_rules_start"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", GOTO="madwimax_rules_start"
+GOTO="madwimax_rules_end"
+
+LABEL="madwimax_rules_start"
+
 # run madwimax
-ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6761", RUN+="@SBINDIR@/madwimax -df --exact-device=$attr{device/busnum}/$attr{device/devnum}"
-ATTRS{idVendor}=="04e9", ATTRS{idProduct}=="6761", RUN+="@SBINDIR@/madwimax -df --exact-device=$attr{device/busnum}/$attr{device/devnum}"
-ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6731", RUN+="@SBINDIR@/madwimax -d --exact-device=$attr{device/busnum}/$attr{device/devnum}"
-ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6780", RUN+="@SBINDIR@/madwimax -df --exact-device=$attr{device/busnum}/$attr{device/devnum}"
+ENV{ID_VENDOR_ID}=="04e8", ENV{ID_MODEL_ID}=="6761", RUN+="@SBINDIR@/madwimax -df --exact-device=$env{BUSNUM}/$env{DEVNUM}"
+ENV{ID_VENDOR_ID}=="04e9", ENV{ID_MODEL_ID}=="6761", RUN+="@SBINDIR@/madwimax -df --exact-device=$env{BUSNUM}/$env{DEVNUM}"
+ENV{ID_VENDOR_ID}=="04e8", ENV{ID_MODEL_ID}=="6731", RUN+="@SBINDIR@/madwimax -d --exact-device=$env{BUSNUM}/$env{DEVNUM}"
+ENV{ID_VENDOR_ID}=="04e8", ENV{ID_MODEL_ID}=="6780", RUN+="@SBINDIR@/madwimax -df --exact-device=$env{BUSNUM}/$env{DEVNUM}"
 
 LABEL="madwimax_rules_end"
