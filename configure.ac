@@ -58,8 +58,12 @@ fi
 
 # Check for libusb-1.0
 PKG_CHECK_MODULES([libusb1], libusb-1.0,,AC_MSG_ERROR([libusb-1.0 not found]))
-
 CFLAGS="$CFLAGS $libusb1_CFLAGS"
+
+# Check for lua-5.1
+PKG_CHECK_MODULES([lua51], lua5.1,,AC_MSG_ERROR([lua-5.1 not found]))
+CFLAGS="$CFLAGS $lua51_CFLAGS"
+LIBS="$LIBS $lua51_LIBS"
 
 # Only use these when compiling with gcc 
 if ( test "${GCC}" = "yes" )
@@ -116,7 +120,7 @@ AC_ARG_WITH(script,
 	])
 if test -n "${script}"; then
 	AC_MSG_RESULT(using ${script})
-	scriptfile="scripts/events/event.sh.${script}"
+	scriptfile="scripts/conf/event.sh.${script}"
 else
 	AC_MSG_RESULT(no)
 	scriptfile=""
@@ -203,7 +207,7 @@ AC_CONFIG_FILES([
 	include/Makefile
 	man/Makefile
 	src/Makefile
-	scripts/events/Makefile
+	scripts/conf/Makefile
 	${scriptfile}
 	scripts/udev/Makefile
 	scripts/udev/z60_madwimax.rules

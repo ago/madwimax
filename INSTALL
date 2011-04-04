@@ -44,7 +44,7 @@ Event scripts
 
 madWiMAX uses user-supplied scripts to configure network. For example, to
 run DHCP client and configure iptables rules. madWiMAX comes with several
-scripts, optimized for some environments. They live in scripts/events. To
+scripts, optimized for some environments. They live in scripts/conf. To
 select script event.sh.<name>.in to install pass --with-script=<name>
 option to 'configure' script. If you don't want to install any of the
 bundled scripts, pass --without-script.

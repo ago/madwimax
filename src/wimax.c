@@ -37,13 +37,13 @@
 #include "protocol.h"
 #include "wimax.h"
 #include "tap_dev.h"
+#include "devconfig.h"
 
 
 /* variables for the command-line parameters */
 static int daemonize = 0;
-static int diode_on = 1;
 static int detach_dvd = 0;
-static char *realm = "@yota.ru";
+static struct device_config cfg = { .diode_on = 1, .realm = "@yota.ru" };
 static char *event_script = SYSCONFDIR "/event.sh";
 
 static FILE *logfile = NULL;
@@ -519,7 +519,7 @@ void cb_remove_pollfd(int fd, void *user_data)
 	alloc_fds();
 }
 
-static int init(void)
+static int init_lowlevel(void)
 {
 	unsigned char req_data[MAX_PACKET_LEN];
 	int len;
@@ -531,8 +531,10 @@ static int init(void)
 	CHECK_DISCONNECTED(libusb_submit_transfer(req_transfer));
 
 	len = fill_protocol_info_req(req_data,
-			USB_HOST_SUPPORT_SELECTIVE_SUSPEND | USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
-			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER | USB_HOST_SUPPORT_DL_MULTI_PACKETS);
+			USB_HOST_SUPPORT_SELECTIVE_SUSPEND |
+			USB_HOST_SUPPORT_DL_SIX_BYTES_HEADER |
+			USB_HOST_SUPPORT_UL_SIX_BYTES_HEADER |
+			USB_HOST_SUPPORT_DL_MULTI_PACKETS);
 	set_data(req_data, len);
 
 	process_events_by_mask(500, WDS_PROTO_FLAGS);
@@ -540,7 +542,20 @@ static int init(void)
 	len = fill_mac_lowlevel_req(req_data);
 	set_data(req_data, len);
 
-	process_events_by_mask(500, WDS_OTHER);
+	process_events_by_mask(500, WDS_MAC);
+
+	wmlog_msg(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+			wd_status.mac[0], wd_status.mac[1],
+			wd_status.mac[2], wd_status.mac[3],
+			wd_status.mac[4], wd_status.mac[5]);
+
+	return 0;
+}
+
+static int init(void)
+{
+	unsigned char req_data[MAX_PACKET_LEN];
+	int len;
 
 	len = fill_init_cmd(req_data);
 	set_data(req_data, len);
@@ -553,7 +568,7 @@ static int init(void)
 	wmlog_msg(1, "Chip info: %s", wd_status.chip);
 	wmlog_msg(1, "Firmware info: %s", wd_status.firmware);
 
-	len = fill_diode_control_cmd(req_data, diode_on);
+	len = fill_diode_control_cmd(req_data, cfg.diode_on);
 	set_data(req_data, len);
 
 	len = fill_mac_req(req_data);
@@ -561,7 +576,10 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_MAC);
 
-	wmlog_msg(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x", wd_status.mac[0], wd_status.mac[1], wd_status.mac[2], wd_status.mac[3], wd_status.mac[4], wd_status.mac[5]);
+	wmlog_msg(1, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+			wd_status.mac[0], wd_status.mac[1],
+			wd_status.mac[2], wd_status.mac[3],
+			wd_status.mac[4], wd_status.mac[5]);
 
 	len = fill_string_info_req(req_data);
 	set_data(req_data, len);
@@ -578,7 +596,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_set_cmd(req_data, realm);
+	len = fill_auth_set_cmd(req_data, cfg.realm);
 	set_data(req_data, len);
 
 	return 0;
@@ -712,7 +730,7 @@ static void parse_args(int argc, char **argv)
 					break;
 				}
 			case 'o': {
-					diode_on = 0;
+					cfg.diode_on = 0;
 					break;
 				}
 			case 'f': {
@@ -776,7 +794,7 @@ static void parse_args(int argc, char **argv)
 					break;
 				}
 			case 3: {
-					realm = optarg;
+					cfg.realm = optarg;
 					break;
 				}
 			case 'e': {
@@ -908,7 +926,7 @@ int main(int argc, char **argv)
 	alloc_fds();
 	libusb_set_pollfd_notifiers(ctx, cb_add_pollfd, cb_remove_pollfd, NULL);
 
-	r = init();
+	r = init_lowlevel();
 	if (r < 0) {
 		wmlog_msg(0, "init error %d", r);
 		exit_release_resources(1);
@@ -916,6 +934,18 @@ int main(int argc, char **argv)
 
 	if_create();
 	cb_add_pollfd(tap_fd, POLLIN, NULL);
+
+	r = load_config(wd_status.mac, tap_dev, &cfg);
+	if (r < 0) {
+		wmlog_msg(0, "failed to load config %d", r);
+		exit_release_resources(1);
+	}
+
+	r = init();
+	if (r < 0) {
+		wmlog_msg(0, "init error %d", r);
+		exit_release_resources(1);
+	}
 
 	r = scan_loop();
 	if (r < 0) {

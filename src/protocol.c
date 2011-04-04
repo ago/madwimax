@@ -143,6 +143,12 @@ static int process_E_response(struct wimax_dev_status *dev, const unsigned char 
 
 static int process_P_response(struct wimax_dev_status *dev, const unsigned char *buf, int len)
 {
+	if (len == 0x18) {
+		memcpy(dev->mac, buf + 0x12, 0x6);
+		dev->info_updated |= WDS_MAC;
+		return 0;
+	}
+
 	dev->info_updated |= WDS_OTHER;
 	return 0;
 }

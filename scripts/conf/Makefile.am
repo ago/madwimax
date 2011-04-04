@@ -11,4 +11,5 @@ DISTCLEANFILES = event.sh.$(script)
 
 endif
 
+sysconf_DATA = config.lua
 EXTRA_DIST = event.sh.generic.in event.sh.wl500g.in

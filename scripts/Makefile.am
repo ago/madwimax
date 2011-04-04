@@ -1,1 +1,1 @@
-SUBDIRS = events udev
+SUBDIRS = conf udev
