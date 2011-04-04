@@ -1,3 +1,11 @@
+Version 0.2.0
+  - Introduce configuration file that is actually a script on Lua so you
+    can use it for all sorts of dirty hacks. :)
+  - Rename SSID to realm everywhere.
+  - Now one should use 'realm' instead of '@realm' when passing the value
+    through command line or configuration file. The app would try to
+    detect and warn everybody who uses the old style.
+
 Version 0.1.1
   - Added support for SWC-E100.
   - Added support for Mezon (www.mezon.lt) version of SWC-U200. You
