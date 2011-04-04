@@ -43,7 +43,7 @@
 static int daemonize = 0;
 static int diode_on = 1;
 static int detach_dvd = 0;
-static char *ssid = "@yota.ru";
+static char *realm = "@yota.ru";
 static char *event_script = SYSCONFDIR "/event.sh";
 
 static FILE *logfile = NULL;
@@ -578,7 +578,7 @@ static int init(void)
 
 	process_events_by_mask(500, WDS_OTHER);
 
-	len = fill_auth_set_cmd(req_data, ssid);
+	len = fill_auth_set_cmd(req_data, realm);
 	set_data(req_data, len);
 
 	return 0;
@@ -646,7 +646,7 @@ void usage(const char *progname)
 	printf("      --device=VID:PID        specify the USB device by VID:PID\n");
 	printf("      --exact-device=BUS/DEV  specify the exact USB bus/device (use with care!)\n");
 	printf("  -V, --version               print the version number\n");
-	printf("      --ssid                  specify SSID, a friendly name that identifies a\n");
+	printf("      --realm                 specify realm, a friendly name that identifies a\n");
 	printf("                              particular 802.16e wireless network\n");
 	printf("  -e, --event-script=FILE     specify path to the event script\n");
 	printf("  -h, --help                  display this help\n");
@@ -676,7 +676,7 @@ static void parse_args(int argc, char **argv)
 			{"device",		required_argument,	0, 1},
 			{"exact-device",	required_argument,	0, 2},
 			{"version",		no_argument,		0, 'V'},
-			{"ssid",		required_argument,	0, 3},
+			{"realm",		required_argument,	0, 3},
 			{"event-script",	required_argument,	0, 'e'},
 			{"help",		no_argument,		0, 'h'},
 			{0, 0, 0, 0}
@@ -776,7 +776,7 @@ static void parse_args(int argc, char **argv)
 					break;
 				}
 			case 3: {
-					ssid = optarg;
+					realm = optarg;
 					break;
 				}
 			case 'e': {
