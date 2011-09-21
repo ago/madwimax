@@ -671,7 +671,7 @@ void usage(const char *progname)
 }
 
 /* print version */
-void version()
+static void version()
 {
 	printf("%s %s\n", PACKAGE_NAME, get_madwimax_version());
 }
